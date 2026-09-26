@@ -30,13 +30,14 @@ on:
 
 jobs:
   # ============================================================
-  # Step 1: 检测源码是否有更新
+  # Step 1: 检测源码是否有更新 + 生成动态 matrix
   # ============================================================
   check-update:
     name: Check Source Update
     runs-on: ubuntu-latest
     outputs:
       has_update: ${{ steps.check.outputs.has_update }}
+      build_matrix: ${{ steps.check.outputs.build_matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -51,16 +52,23 @@ jobs:
           restore-keys: |
             immortalwrt-source-hash-
 
-      - name: Check ImmortalWrt Branch Updates
+      - name: Check ImmortalWrt Branch Updates & Generate Matrix
         id: check
         run: |
           set -euo pipefail
-          
-          # 周六定时触发时检测两个分支；手动触发时只检测选定分支
+
+          # 定时触发：检测两个分支，全量编译
+          # 手动触发：只检测选定分支，只编译选定配置
           if [ "${{ github.event_name }}" = "schedule" ]; then
             BRANCHES="openwrt-24.10 master"
+            # 构建全量 matrix
+            MATRIX='[{"branch":"openwrt-24.10","profile":"Plus"},{"branch":"openwrt-24.10","profile":"Plus+Docker"},{"branch":"openwrt-24.10","profile":"VPN"},{"branch":"master","profile":"Plus"},{"branch":"master","profile":"Plus+Docker"},{"branch":"master","profile":"VPN"}]'
           else
-            BRANCHES="${{ inputs.branch }}"
+            BRANCH="${{ inputs.branch }}"
+            PROFILE="${{ inputs.profile }}"
+            BRANCHES="$BRANCH"
+            # 只编译用户选择的那一组
+            MATRIX="[{\"branch\":\"$BRANCH\",\"profile\":\"$PROFILE\"}]"
           fi
 
           HAS_UPDATE="false"
@@ -84,14 +92,23 @@ jobs:
             fi
           done
 
+          # 手动触发时跳过更新检测，直接编译
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            HAS_UPDATE="true"
+            echo "📋 手动触发，跳过更新检测，直接编译"
+          fi
+
           echo "has_update=$HAS_UPDATE" >> $GITHUB_OUTPUT
+          echo "build_matrix=$MATRIX" >> $GITHUB_OUTPUT
+
           echo ""
           echo "========================================"
           echo "有更新: $HAS_UPDATE"
+          echo "Matrix: $MATRIX"
           echo "========================================"
 
   # ============================================================
-  # Step 2: 有更新则触发编译（matrix 并行）
+  # Step 2: 有更新则触发编译（动态 matrix）
   # ============================================================
   build:
     name: Build ${{ matrix.branch }} / ${{ matrix.profile }}
@@ -100,19 +117,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - branch: 'openwrt-24.10'
-            profile: 'Plus'
-          - branch: 'openwrt-24.10'
-            profile: 'Plus+Docker'
-          - branch: 'openwrt-24.10'
-            profile: 'VPN'
-          - branch: 'master'
-            profile: 'Plus'
-          - branch: 'master'
-            profile: 'Plus+Docker'
-          - branch: 'master'
-            profile: 'VPN'
+        include: ${{ fromJSON(needs.check-update.outputs.build_matrix) }}
     uses: ./.github/workflows/build-openwrt.yml
     with:
       branch: ${{ matrix.branch }}
@@ -121,7 +126,7 @@ jobs:
     secrets: inherit
 
   # ============================================================
-  # Step 3: 编译完成后保存 hash 缓存
+  # Step 3: 编译完成后保存 hash 缩存
   # ============================================================
   save-hash:
     name: Save Last Hash
