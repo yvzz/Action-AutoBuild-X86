@@ -1,0 +1,154 @@
+name: Schedule Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '选择 ImmortalWrt 分支'
+        required: true
+        default: 'openwrt-24.10'
+        type: choice
+        options:
+          - 'openwrt-24.10'
+          - 'master'
+      profile:
+        description: '选择固件配置'
+        required: true
+        default: 'Plus'
+        type: choice
+        options:
+          - 'Plus'
+          - 'Plus+Docker'
+          - 'VPN'
+      lan_ip:
+        description: 'LAN IP 地址（留空使用配置默认值）'
+        required: false
+        default: ''
+  schedule:
+    # 每周六 00:00 北京时间 (UTC 周五 16:00)
+    - cron: '0 16 * * 5'
+
+jobs:
+  # ============================================================
+  # Step 1: 检测源码是否有更新
+  # ============================================================
+  check-update:
+    name: Check Source Update
+    runs-on: ubuntu-latest
+    outputs:
+      has_update: ${{ steps.check.outputs.has_update }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Restore Last Hash Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            openwrt-24.10-last-hash.txt
+            master-last-hash.txt
+          key: immortalwrt-source-hash
+          restore-keys: |
+            immortalwrt-source-hash-
+
+      - name: Check ImmortalWrt Branch Updates
+        id: check
+        run: |
+          set -euo pipefail
+          
+          # 周六定时触发时检测两个分支；手动触发时只检测选定分支
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            BRANCHES="openwrt-24.10 master"
+          else
+            BRANCHES="${{ inputs.branch }}"
+          fi
+
+          HAS_UPDATE="false"
+
+          for BRANCH in $BRANCHES; do
+            echo "🔍 检查 immortalwrt/$BRANCH ..."
+            REMOTE_HASH=$(git ls-remote https://github.com/immortalwrt/immortalwrt refs/heads/$BRANCH | awk '{print $1}')
+            echo "  远程最新: ${REMOTE_HASH:0:12}"
+
+            HASH_FILE="${BRANCH//\//-}-last-hash.txt"
+            LAST_HASH=""
+            [ -f "$HASH_FILE" ] && LAST_HASH=$(cat "$HASH_FILE")
+            echo "  上次编译: ${LAST_HASH:0:12}"
+
+            if [ "$REMOTE_HASH" != "$LAST_HASH" ] && [ -n "$REMOTE_HASH" ]; then
+              echo "  ✅ 检测到更新"
+              HAS_UPDATE="true"
+              echo "$REMOTE_HASH" > "$HASH_FILE"
+            else
+              echo "  ⏭️ 无更新"
+            fi
+          done
+
+          echo "has_update=$HAS_UPDATE" >> $GITHUB_OUTPUT
+          echo ""
+          echo "========================================"
+          echo "有更新: $HAS_UPDATE"
+          echo "========================================"
+
+  # ============================================================
+  # Step 2: 有更新则触发编译（matrix 并行）
+  # ============================================================
+  build:
+    name: Build ${{ matrix.branch }} / ${{ matrix.profile }}
+    needs: check-update
+    if: needs.check-update.outputs.has_update == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branch: 'openwrt-24.10'
+            profile: 'Plus'
+          - branch: 'openwrt-24.10'
+            profile: 'Plus+Docker'
+          - branch: 'openwrt-24.10'
+            profile: 'VPN'
+          - branch: 'master'
+            profile: 'Plus'
+          - branch: 'master'
+            profile: 'Plus+Docker'
+          - branch: 'master'
+            profile: 'VPN'
+    uses: ./.github/workflows/build-openwrt.yml
+    with:
+      branch: ${{ matrix.branch }}
+      profile: ${{ matrix.profile }}
+      lan_ip: ${{ inputs.lan_ip || '' }}
+    secrets: inherit
+
+  # ============================================================
+  # Step 3: 编译完成后保存 hash 缓存
+  # ============================================================
+  save-hash:
+    name: Save Last Hash
+    needs: [check-update, build]
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Restore Hash Files
+        uses: actions/cache@v4
+        with:
+          path: |
+            openwrt-24.10-last-hash.txt
+            master-last-hash.txt
+          key: immortalwrt-source-hash
+          restore-keys: |
+            immortalwrt-source-hash-
+
+      - name: Save Hash Files
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            openwrt-24.10-last-hash.txt
+            master-last-hash.txt
+          key: immortalwrt-source-hash-${{ github.run_id }}
+
+      - name: Show Status
+        run: echo "✅ 编译完成，源码 hash 已更新"

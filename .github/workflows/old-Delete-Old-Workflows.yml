@@ -8,6 +8,11 @@ on:
         required: true
         type: number
         default: 7
+      include_cancelled:
+        description: '同时删除取消的 Workflow'
+        required: true
+        type: boolean
+        default: true
   schedule:
     # 每周日 03:00 北京时间 (UTC 周六 19:00)
     - cron: '0 19 * * 6'
@@ -21,9 +26,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           retain_days: ${{ inputs.retain_days || 7 }}
-          keep_minimum_runs: 3
+          keep_minimum_runs: ${{ inputs.retain_days || 7 }}
+          delete_run_by_conclusion_pattern: ''
 
       - name: Delete Cancelled Workflows
+        if: ${{ inputs.include_cancelled || true }}
         uses: Mattraks/delete-workflow-runs@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

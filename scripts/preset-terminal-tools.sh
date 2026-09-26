@@ -1,15 +1,22 @@
 #!/bin/bash
-# Configure TTYD terminal without login
-set -e
+# ============================================================
+# 配置 ZSH 终端环境（oh-my-zsh + 插件）
+# ============================================================
+set -euo pipefail
 
 OPENWRT_PATH="${OPENWRT_PATH:-$PWD}"
-TTYD_CONFIG="${OPENWRT_PATH}/package/feeds/packages/ttyd/files/ttyd.config"
 
-if [ -f "$TTYD_CONFIG" ]; then
-    echo "Configuring ttyd for no-login mode..."
-    sed -i 's/config ttyd\t\ttyd/config ttyd/' "$TTYD_CONFIG"
-    sed -i 's/option command/#option command/' "$TTYD_CONFIG"
-    echo "ttyd configured successfully"
-else
-    echo "ttyd config not found, skipping"
-fi
+[ -d "$OPENWRT_PATH/files/root" ] || mkdir -p "$OPENWRT_PATH/files/root"
+
+# Clone oh-my-zsh
+git clone -q https://github.com/ohmyzsh/ohmyzsh "$OPENWRT_PATH/files/root/.oh-my-zsh"
+
+# Install extra plugins
+git clone -q https://github.com/zsh-users/zsh-autosuggestions "$OPENWRT_PATH/files/root/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+git clone -q https://github.com/zsh-users/zsh-syntax-highlighting "$OPENWRT_PATH/files/root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+git clone -q https://github.com/zsh-users/zsh-completions "$OPENWRT_PATH/files/root/.oh-my-zsh/custom/plugins/zsh-completions"
+
+# Copy .zshrc
+cp "$GITHUB_WORKSPACE/scripts/.zshrc" "$OPENWRT_PATH/files/root"
+
+echo "✅ ZSH 终端工具配置完成"
