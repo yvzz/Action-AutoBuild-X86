@@ -108,6 +108,18 @@ git_clone_all https://github.com/nikkinikki-org/OpenWrt-momo
 git_clone https://github.com/esirplayground/luci-app-poweroff
 git_clone -b openwrt-18.06 https://github.com/tty228/luci-app-wechatpush luci-app-serverchan
 
+# ============ 用户追加功能源 ============
+# 腾讯云 DDNS (luci-app-tencentddns)
+git_clone https://github.com/Tencent-Cloud-Plugins/tencentcloud-openwrt-plugin-ddns
+# NPC 内网穿透客户端 (luci-app-npc + npc)
+git_clone https://github.com/goodmen001/nps-openwrt
+# EasyTier 去中心化组网 (luci-app-easytier)
+git_clone https://github.com/EasyTier/luci-app-easytier
+# rtp2httpd IPTV 组播转单播 (luci-app-rtp2httpd + rtp2httpd)
+# 注意: 其 Makefile 用 $(CURDIR)/../../* 拷贝整个仓库源码，
+# 必须保持 package/rtp2httpd/openwrt-support/... 的相对路径结构，不能拆开拷贝
+git_clone https://github.com/stackia/rtp2httpd
+
 # 主题
 git_clone https://github.com/jerrykuku/luci-theme-argon
 git_clone https://github.com/jerrykuku/luci-app-argon-config
