@@ -5,21 +5,29 @@
 # ============================================================
 set -eo pipefail
 
+# 克隆失败不中断编译（关键包除外）
+CLONE_FATAL=false
+clone_fail() { CLONE_FATAL=true; }
+
 # ------------------------------------------------------------
 # 工具函数：git clone 辅助（吸收自 A 仓库，简化版）
 # ------------------------------------------------------------
 
 # 克隆整个仓库到 package/
+# 用法: git_clone <url> [target_dir]
+#       git_clone -b <branch> <url> [target_dir]
 git_clone() {
-    local repo_url branch target_dir
-    if [[ "$1" == */* ]]; then
-        repo_url="$1"; shift
-    else
-        branch="-b $1 --single-branch"; repo_url="$2"; shift 2
+    local branch="" target_dir
+    if [[ "$1" == "-b" ]]; then
+        branch="-b $2 --single-branch"
+        shift 2
     fi
+    local repo_url="$1"; shift
     target_dir="${1:-${repo_url##*/}}"
     git clone -q $branch --depth=1 "$repo_url" "package/$target_dir" 2>/dev/null || {
-        echo "  ❌ 拉取失败: $repo_url"; return 1
+        echo "  ⚠️  跳过: $repo_url (分支不存在或网络错误)"
+        rm -rf "package/$target_dir" 2>/dev/null
+        return 0
     }
     rm -rf "package/$target_dir/{.git*,README*.md,LICENSE}"
     echo "  ✅ 添加: $target_dir"
@@ -44,7 +52,8 @@ git_clone_all() {
         branch="-b $1 --single-branch"; repo_url="$2"; shift 2
     fi
     git clone -q $branch --depth=1 "$repo_url" "$temp_dir" 2>/dev/null || {
-        echo "  ❌ 拉取失败: $repo_url"; rm -rf "$temp_dir"; return 1
+        echo "  ⚠️  跳过: $repo_url (分支不存在或网络错误)"
+        rm -rf "$temp_dir"; return 0
     }
     for d in "$temp_dir"/*/; do
         [ -d "$d" ] && cp -rf "$d" package/
@@ -95,7 +104,7 @@ git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclas
 git_clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
 git_clone_all https://github.com/nikkinikki-org/OpenWrt-momo
 
-# VPN 相关
+# VPN相关
 git_clone https://github.com/esirplayground/luci-app-poweroff
 git_clone -b openwrt-18.06 https://github.com/tty228/luci-app-wechatpush luci-app-serverchan
 
