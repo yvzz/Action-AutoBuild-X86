@@ -200,7 +200,10 @@ sed -i 's/CONFIG_PACKAGE_luci-app-oaf=y/# CONFIG_PACKAGE_luci-app-oaf is not set
 #     保留默认变体 iptables-nft，移除冗余的 zz-legacy select
 # ------------------------------------------------------------
 for f in $(find package -maxdepth 2 -type f -name Makefile -path "*passwall*" 2>/dev/null); do
-    sed -i '/select PACKAGE_iptables-zz-legacy/d' "$f" && echo "  ✅ 修复 select 冲突: $f"
+    if grep -q 'select PACKAGE_iptables-zz-legacy' "$f"; then
+        sed -i '/select PACKAGE_iptables-zz-legacy/d' "$f"
+        echo "  ✅ 移除 select 冲突: $f"
+    fi
 done
 
 echo ""
