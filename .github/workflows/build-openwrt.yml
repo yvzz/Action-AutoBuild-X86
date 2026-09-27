@@ -210,12 +210,13 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/openwrt/bin/targets/*/*
           echo "生成 SHA256 校验和..."
-          sha256sum * > sha256sums
+          # 只对文件做哈希，忽略 packages/ 等子目录（否则 sha256sum 报 'Is a directory' 并以非 0 退出）
+          find . -maxdepth 1 -type f -print0 | xargs -0 -r sha256sum > sha256sums
           echo "复制 .config 文件..."
           cp $GITHUB_WORKSPACE/openwrt/.config built.config
-          echo "打包 IPK 文件..."
+          echo "打包 IPK/APK 包文件..."
           mkdir -p packages
-          find $GITHUB_WORKSPACE/openwrt/bin/packages -name "*.ipk" -exec cp {} packages/ \; 2>/dev/null || true
+          find $GITHUB_WORKSPACE/openwrt/bin/packages \( -name "*.ipk" -o -name "*.apk" \) -exec cp {} packages/ \; 2>/dev/null || true
           tar -czf packages.tar.gz packages/
           echo "删除 buildinfo 文件..."
           rm -f *.buildinfo

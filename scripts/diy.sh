@@ -193,6 +193,16 @@ echo "    option mediaurlbase '/luci-static/argon'" >> package/base-files/files/
 sed -i 's/CONFIG_PACKAGE_kmod-oaf=y/# CONFIG_PACKAGE_kmod-oaf is not set/g' .config 2>/dev/null || true
 sed -i 's/CONFIG_PACKAGE_luci-app-oaf=y/# CONFIG_PACKAGE_luci-app-oaf is not set/g' .config 2>/dev/null || true
 
+# ------------------------------------------------------------
+# 12. 修复 passwall/passwall2 在 apk(master) 下的 select 冲突
+#     Iptables_Transparent_Proxy 同时 select iptables-nft 与 iptables-zz-legacy，
+#     两者 PROVIDES iptables 且互斥：opkg 容忍，apk 报 "unable to select packages"
+#     保留默认变体 iptables-nft，移除冗余的 zz-legacy select
+# ------------------------------------------------------------
+for f in $(find package -maxdepth 2 -type f -name Makefile -path "*passwall*" 2>/dev/null); do
+    sed -i '/select PACKAGE_iptables-zz-legacy/d' "$f" && echo "  ✅ 修复 select 冲突: $f"
+done
+
 echo ""
 echo "========================================"
 echo "✅ DIY 脚本执行完成"
