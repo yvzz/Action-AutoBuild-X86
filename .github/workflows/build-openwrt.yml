@@ -89,10 +89,16 @@ jobs:
       - name: Optimize Disk Space
         uses: sclsyin/disk-space-optimizer-ghaction@main
 
-      - name: Maximize Build Space
-        uses: sclsyin/maximize-build-space@master
-        with:
-          swap-size-mb: 8192
+      - name: Create Swap Space
+        run: |
+          echo "创建 swap（不迁移工作区，避免 GITHUB_WORKSPACE 路径失效）..."
+          sudo swapoff -a || true
+          sudo rm -f /swapfile
+          sudo dd if=/dev/zero of=/swapfile bs=1M count=8192 status=progress || true
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          echo "swap 状态:"; swapon --show || true
 
       - name: Disk Space Status
         run: |
