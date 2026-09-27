@@ -190,10 +190,6 @@ jobs:
           if [ -f "$GITHUB_WORKSPACE/scripts/preset-terminal-tools.sh" ]; then
             $GITHUB_WORKSPACE/scripts/preset-terminal-tools.sh
           fi
-          echo "预设 AdGuard 核心..."
-          if [ -f "$GITHUB_WORKSPACE/scripts/preset-adguard-core.sh" ]; then
-            $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh
-          fi
 
       - name: Download DL Packages
         run: |
