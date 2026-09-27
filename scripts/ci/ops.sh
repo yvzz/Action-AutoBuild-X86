@@ -37,8 +37,13 @@ src_ref() {
 # check-token: 前置校验（早失败，别等编译完才发现没令牌）
 # ------------------------------------------------------------
 check_token() {
-  [[ -n "${GITHUB_TOKEN:-${REPO_TOKEN:-}}" ]] || die "GITHUB_TOKEN / REPO_TOKEN 缺失"
-  log "token 校验通过"
+  if [[ -n "${GITHUB_TOKEN:-${REPO_TOKEN:-}}" ]]; then
+    log "token 校验通过"
+  else
+    # 编译本身不依赖 token；仅 Release 发布需要。改为告警不阻断，
+    # 便于测试工作流继续跑编译、定位是否真缺 token。
+    log "⚠️ 未检测到 GITHUB_TOKEN / REPO_TOKEN：影响 Release 发布，不影响编译"
+  fi
 }
 
 # ------------------------------------------------------------
@@ -223,7 +228,10 @@ upload_release() {
   local tag="${1:?usage: upload-release <tag> <dir>}"
   local dir="${2:?usage: upload-release <tag> <dir>}"
   local token="${GITHUB_TOKEN:-${REPO_TOKEN:-}}"
-  [[ -n "$token" ]] || die "缺少 GITHUB_TOKEN"
+  if [[ -z "$token" ]]; then
+    log "⚠️ 缺少 GITHUB_TOKEN，跳过 Release 发布（编译产物仍在 Artifact 中）"
+    return 0
+  fi
   [[ -d "$dir" ]] || die "上传目录不存在: $dir"
 
   local api="https://api.github.com/repos/${GITHUB_REPOSITORY}"

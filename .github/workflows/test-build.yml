@@ -59,6 +59,7 @@ jobs:
         run: bash scripts/tests/diy-smoke.sh
 
       - name: 校验密钥与上下文
+        continue-on-error: true
         env:
           PROFILE: ${{ inputs.profile }}
           LAN_IP: ${{ inputs.lan_ip }}
