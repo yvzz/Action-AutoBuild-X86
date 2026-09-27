@@ -8,10 +8,10 @@
 #   · 使用内置 GITHUB_TOKEN（无需高权限 PAT）
 # 配置仍使用现有 configs/x86_64_*.config，不影响 schedule-build.yml / build-openwrt.yml
 #
-# 注意：maximize-build-space 会把仓库迁移到 /mnt 并更新 GITHUB_WORKSPACE，
-#       因此所有脚本调用都先 `cd "$GITHUB_WORKSPACE"`，绝对路径/缓存键用 ${{ env.GITHUB_WORKSPACE }}
-#
-name: 测试编译（新架构）
+# 注意：不使用会迁移工作区的第三方 maximize-build-space（它会把仓库搬到 /mnt 但改不了
+#       保留变量 GITHUB_WORKSPACE，导致后续步骤在空的原路径找不到脚本）。改用自带
+#       ops.sh cleanup-disk（apt purge 大体积 SDK 释放根分区，不搬迁任何文件）。
+#name: 测试编译（新架构）
 
 on:
   workflow_dispatch:
@@ -71,11 +71,9 @@ jobs:
           bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" check-token
           bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" load-context "${{ inputs.branch }}"
 
-      - name: 最大化构建空间
-        uses: sclsyin/maximize-build-space@master
-        with:
-          swap-size-mb: 8192
-          root-reserve-mb: 20480
+      - name: 释放磁盘空间
+        run: |
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" cleanup-disk
 
       - name: 部署编译环境
         run: |
