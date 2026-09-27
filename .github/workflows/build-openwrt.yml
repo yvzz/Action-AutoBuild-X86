@@ -37,13 +37,13 @@ jobs:
 
     steps:
       # 分支标签 -> ImmortalWrt 上游分支映射
-      # v24.10 -> openwrt-24.10（稳定）  v25.12 -> master（滚动 SNAPSHOT）
+      # v24.10 -> openwrt-24.10（稳定）  v25.12 -> openwrt-25.12（稳定）
       - name: Resolve Source Branch
         id: resolve
         run: |
           case "${{ inputs.branch }}" in
             v24.10) REF="openwrt-24.10" ;;
-            v25.12) REF="master" ;;
+            v25.12) REF="openwrt-25.12" ;;
             *)      REF="${{ inputs.branch }}" ;;
           esac
           echo "ref=$REF" >> "$GITHUB_OUTPUT"

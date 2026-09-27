@@ -10,7 +10,7 @@ on:
         type: choice
         options:
           - 'v24.10'   # ImmortalWrt openwrt-24.10（稳定版）
-          - 'v25.12'   # ImmortalWrt master（滚动 SNAPSHOT）
+          - 'v25.12'   # ImmortalWrt openwrt-25.12（稳定版）
       profile:
         description: '选择固件配置'
         required: true
@@ -70,7 +70,7 @@ jobs:
           src_ref() {
             case "$1" in
               v24.10) echo "openwrt-24.10" ;;
-              v25.12) echo "master" ;;
+              v25.12) echo "openwrt-25.12" ;;
               *)      echo "$1" ;;
             esac
           }
@@ -185,7 +185,7 @@ jobs:
           src_ref() {
             case "$1" in
               v24.10) echo "openwrt-24.10" ;;
-              v25.12) echo "master" ;;
+              v25.12) echo "openwrt-25.12" ;;
               *)      echo "$1" ;;
             esac
           }
