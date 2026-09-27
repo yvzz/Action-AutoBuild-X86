@@ -40,10 +40,13 @@
 
 ### 手动编译
 
-在 GitHub Actions 页面手动触发 `Schedule Build`（跳过更新检测，直接编译所选一组）：
+在 GitHub Actions 页面手动触发 `Schedule Build`：
 - 选择分支（v24.10 / v25.12）
 - 选择配置（Plus / Plus+Docker）
 - 可选设置 LAN IP
+- **无更新时继续编译**（`force_build`，默认不勾选）
+  - 不勾选：同样先检测更新，无更新则不编译（日志会提示）
+  - 勾选：忽略更新检测，**不论是否有更新都强制编译**所选一组
 
 ## 📁 仓库结构
 

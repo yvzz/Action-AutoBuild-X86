@@ -23,6 +23,11 @@ on:
         description: 'LAN IP 地址（留空使用配置默认值）'
         required: false
         default: ''
+      force_build:
+        description: '无更新时继续编译（勾选后忽略更新检测，强制编译）'
+        required: false
+        default: false
+        type: boolean
   schedule:
     # 每周六 00:00 北京时间（= UTC 周五 16:00）
     - cron: '0 16 * * 5'
@@ -57,6 +62,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           IN_BRANCH: ${{ inputs.branch }}
           IN_PROFILE: ${{ inputs.profile }}
+          IN_FORCE: ${{ inputs.force_build }}
         run: |
           set -euo pipefail
 
@@ -79,6 +85,13 @@ jobs:
             MANUAL="true"
           fi
 
+          # 强制编译开关：仅手动勾选 force_build 时生效（默认 false）
+          FORCE="false"
+          if [ "$MANUAL" = "true" ] && [ "${IN_FORCE:-false}" = "true" ]; then
+            FORCE="true"
+            echo "⚡ 已勾选「无更新时继续编译」，将忽略更新检测"
+          fi
+
           UPDATED=""
           for B in $BRANCHES; do
             REF=$(src_ref "$B")
@@ -88,14 +101,18 @@ jobs:
             [ -f "$MARKER" ] && LAST=$(tr -d '[:space:]' < "$MARKER")
             echo "🔍 $B（上游 $REF）: remote=${REMOTE:0:12} last=${LAST:0:12}"
 
-            if [ "$MANUAL" = "true" ]; then
-              echo "  📋 手动触发，直接编译"
+            if [ "$FORCE" = "true" ]; then
+              echo "  ⚡ 强制编译（忽略更新检测）"
               UPDATED="$UPDATED $B"
             elif [ -n "$REMOTE" ] && [ "$REMOTE" != "$LAST" ]; then
               echo "  ✅ 检测到更新"
               UPDATED="$UPDATED $B"
             else
-              echo "  ⏭️ 无更新，跳过"
+              if [ "$MANUAL" = "true" ]; then
+                echo "  ⏭️ 无更新，跳过（如需强制编译，请勾选「无更新时继续编译」）"
+              else
+                echo "  ⏭️ 无更新，跳过"
+              fi
             fi
           done
           UPDATED="${UPDATED# }"
