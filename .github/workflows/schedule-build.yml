@@ -19,7 +19,6 @@ on:
         options:
           - 'Plus'
           - 'Plus+Docker'
-          - 'VPN'
       lan_ip:
         description: 'LAN IP 地址（留空使用配置默认值）'
         required: false
@@ -62,7 +61,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             BRANCHES="openwrt-24.10 master"
             # 构建全量 matrix
-            MATRIX='[{"branch":"openwrt-24.10","profile":"Plus"},{"branch":"openwrt-24.10","profile":"Plus+Docker"},{"branch":"openwrt-24.10","profile":"VPN"},{"branch":"master","profile":"Plus"},{"branch":"master","profile":"Plus+Docker"},{"branch":"master","profile":"VPN"}]'
+            MATRIX='[{"branch":"openwrt-24.10","profile":"Plus"},{"branch":"openwrt-24.10","profile":"Plus+Docker"},{"branch":"master","profile":"Plus"},{"branch":"master","profile":"Plus+Docker"}]'
           else
             BRANCH="${{ inputs.branch }}"
             PROFILE="${{ inputs.profile }}"
