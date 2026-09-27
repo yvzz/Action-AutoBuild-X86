@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: '选择 ImmortalWrt 分支'
+        description: '选择编译分支'
         required: true
-        default: 'openwrt-24.10'
+        default: 'v24.10'
         type: choice
         options:
-          - 'openwrt-24.10'
-          - 'master'
+          - 'v24.10'   # ImmortalWrt openwrt-24.10（稳定版）
+          - 'v25.12'   # ImmortalWrt master（滚动 SNAPSHOT）
       profile:
         description: '选择固件配置'
         required: true
@@ -24,12 +24,21 @@ on:
         required: false
         default: ''
   schedule:
-    # 每周六 00:00 北京时间 (UTC 周五 16:00)
+    # 每周六 00:00 北京时间（= UTC 周五 16:00）
     - cron: '0 16 * * 5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: schedule-build
+  cancel-in-progress: false
 
 jobs:
   # ============================================================
   # Step 1: 检测源码是否有更新 + 生成动态 matrix
+  #   - 定时触发：检测 v24.10 / v25.12 两个分支，仅编译「有更新」的分支
+  #   - 手动触发：跳过检测，只编译用户选定的那一组
   # ============================================================
   check-update:
     name: Check Source Update
@@ -37,77 +46,86 @@ jobs:
     outputs:
       has_update: ${{ steps.check.outputs.has_update }}
       build_matrix: ${{ steps.check.outputs.build_matrix }}
+      updated: ${{ steps.check.outputs.updated }}
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
-      - name: Restore Last Hash Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            openwrt-24.10-last-hash.txt
-            master-last-hash.txt
-          key: immortalwrt-source-hash
-          restore-keys: |
-            immortalwrt-source-hash-
-
-      - name: Check ImmortalWrt Branch Updates & Generate Matrix
+      - name: Check Branch Updates & Generate Matrix
         id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_BRANCH: ${{ inputs.branch }}
+          IN_PROFILE: ${{ inputs.profile }}
         run: |
           set -euo pipefail
 
-          # 定时触发：检测两个分支，全量编译
-          # 手动触发：只检测选定分支，只编译选定配置
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            BRANCHES="openwrt-24.10 master"
-            # 构建全量 matrix
-            MATRIX='[{"branch":"openwrt-24.10","profile":"Plus"},{"branch":"openwrt-24.10","profile":"Plus+Docker"},{"branch":"master","profile":"Plus"},{"branch":"master","profile":"Plus+Docker"}]'
+          # 分支标签 -> ImmortalWrt 上游分支
+          src_ref() {
+            case "$1" in
+              v24.10) echo "openwrt-24.10" ;;
+              v25.12) echo "master" ;;
+              *)      echo "$1" ;;
+            esac
+          }
+
+          if [ "$EVENT" = "schedule" ]; then
+            BRANCHES="v24.10 v25.12"
+            PROFILES="Plus|Plus+Docker"
+            MANUAL="false"
           else
-            BRANCH="${{ inputs.branch }}"
-            PROFILE="${{ inputs.profile }}"
-            BRANCHES="$BRANCH"
-            # 只编译用户选择的那一组
-            MATRIX="[{\"branch\":\"$BRANCH\",\"profile\":\"$PROFILE\"}]"
+            BRANCHES="$IN_BRANCH"
+            PROFILES="$IN_PROFILE"
+            MANUAL="true"
           fi
 
-          HAS_UPDATE="false"
+          UPDATED=""
+          for B in $BRANCHES; do
+            REF=$(src_ref "$B")
+            REMOTE=$(git ls-remote https://github.com/immortalwrt/immortalwrt "refs/heads/$REF" | awk '{print $1}')
+            MARKER=".github/last_commit/$B.txt"
+            LAST=""
+            [ -f "$MARKER" ] && LAST=$(tr -d '[:space:]' < "$MARKER")
+            echo "🔍 $B（上游 $REF）: remote=${REMOTE:0:12} last=${LAST:0:12}"
 
-          for BRANCH in $BRANCHES; do
-            echo "🔍 检查 immortalwrt/$BRANCH ..."
-            REMOTE_HASH=$(git ls-remote https://github.com/immortalwrt/immortalwrt refs/heads/$BRANCH | awk '{print $1}')
-            echo "  远程最新: ${REMOTE_HASH:0:12}"
-
-            HASH_FILE="${BRANCH//\//-}-last-hash.txt"
-            LAST_HASH=""
-            [ -f "$HASH_FILE" ] && LAST_HASH=$(cat "$HASH_FILE")
-            echo "  上次编译: ${LAST_HASH:0:12}"
-
-            if [ "$REMOTE_HASH" != "$LAST_HASH" ] && [ -n "$REMOTE_HASH" ]; then
+            if [ "$MANUAL" = "true" ]; then
+              echo "  📋 手动触发，直接编译"
+              UPDATED="$UPDATED $B"
+            elif [ -n "$REMOTE" ] && [ "$REMOTE" != "$LAST" ]; then
               echo "  ✅ 检测到更新"
-              HAS_UPDATE="true"
-              echo "$REMOTE_HASH" > "$HASH_FILE"
+              UPDATED="$UPDATED $B"
             else
-              echo "  ⏭️ 无更新"
+              echo "  ⏭️ 无更新，跳过"
             fi
           done
+          UPDATED="${UPDATED# }"
 
-          # 手动触发时跳过更新检测，直接编译
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            HAS_UPDATE="true"
-            echo "📋 手动触发，跳过更新检测，直接编译"
-          fi
+          # 动态 matrix：仅包含本次需要编译的组合
+          MATRIX="["
+          SEP=""
+          for B in $UPDATED; do
+            for P in $(echo "$PROFILES" | tr '|' ' '); do
+              MATRIX="${MATRIX}${SEP}{\"branch\":\"${B}\",\"profile\":\"${P}\"}"
+              SEP=","
+            done
+          done
+          MATRIX="${MATRIX}]"
 
-          echo "has_update=$HAS_UPDATE" >> $GITHUB_OUTPUT
-          echo "build_matrix=$MATRIX" >> $GITHUB_OUTPUT
+          if [ "$MATRIX" = "[]" ]; then HAS="false"; else HAS="true"; fi
+
+          echo "has_update=$HAS"      >> "$GITHUB_OUTPUT"
+          echo "build_matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "updated=$UPDATED"     >> "$GITHUB_OUTPUT"
 
           echo ""
           echo "========================================"
-          echo "有更新: $HAS_UPDATE"
+          echo "有更新: $HAS"
+          echo "待编译: ${UPDATED:-（无）}"
           echo "Matrix: $MATRIX"
           echo "========================================"
 
   # ============================================================
-  # Step 2: 有更新则触发编译（动态 matrix）
+  # Step 2: 有更新则触发编译（动态 matrix，复用 build-openwrt.yml）
   # ============================================================
   build:
     name: Build ${{ matrix.branch }} / ${{ matrix.profile }}
@@ -125,34 +143,67 @@ jobs:
     secrets: inherit
 
   # ============================================================
-  # Step 3: 编译完成后保存 hash 缩存
+  # Step 3: 编译成功后，把源码 hash 回写进仓库（.github/last_commit/）
+  #   仅在对应分支编译成功时更新，失败不更新（下次仍会重编）
   # ============================================================
-  save-hash:
-    name: Save Last Hash
+  save-marker:
+    name: Update Source Marker
     needs: [check-update, build]
-    if: always() && needs.build.result == 'success'
+    if: always() && needs.check-update.outputs.has_update == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@main
-
-      - name: Restore Hash Files
-        uses: actions/cache@v4
+        uses: actions/checkout@v4
         with:
-          path: |
-            openwrt-24.10-last-hash.txt
-            master-last-hash.txt
-          key: immortalwrt-source-hash
-          restore-keys: |
-            immortalwrt-source-hash-
+          fetch-depth: 0
 
-      - name: Save Hash Files
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            openwrt-24.10-last-hash.txt
-            master-last-hash.txt
-          key: immortalwrt-source-hash-${{ github.run_id }}
+      - name: Save & Push Markers
+        env:
+          UPDATED: ${{ needs.check-update.outputs.updated }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p .github/last_commit
 
-      - name: Show Status
-        run: echo "✅ 编译完成，源码 hash 已更新"
+          src_ref() {
+            case "$1" in
+              v24.10) echo "openwrt-24.10" ;;
+              v25.12) echo "master" ;;
+              *)      echo "$1" ;;
+            esac
+          }
+
+          for B in $UPDATED; do
+            REF=$(src_ref "$B")
+            H=$(git ls-remote https://github.com/immortalwrt/immortalwrt "refs/heads/$REF" | awk '{print $1}')
+            if [ -z "$H" ]; then
+              echo "⚠️ $B 未取到 hash，跳过"
+              continue
+            fi
+            printf '%s\n' "$H" > ".github/last_commit/$B.txt"
+            echo "✔ $B -> $H"
+          done
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/last_commit
+
+          if git diff --cached --quiet; then
+            echo "标记无变化，跳过提交"
+            exit 0
+          fi
+
+          git commit -m "chore(marker): 更新源码标记 [skip ci]"
+
+          for i in 1 2 3; do
+            if git pull --rebase --autostash origin "${TARGET_BRANCH:-main}" \
+               && git push origin "HEAD:${TARGET_BRANCH:-main}"; then
+              echo "✅ 标记推送成功"
+              exit 0
+            fi
+            echo "⚠️ 推送失败，重试 $i/3 ..."
+            sleep 5
+          done
+
+          echo "❌ 标记推送失败（不影响固件产物）"
+          exit 1

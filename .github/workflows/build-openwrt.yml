@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       branch:
-        description: "源码分支 (openwrt-24.10 或 master)"
+        description: "分支标签 (v24.10 或 v25.12)"
         required: true
         type: string
       profile:
@@ -16,9 +16,11 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: ${{ inputs.branch }}
   CONFIG_FILE: configs/x86_64_${{ inputs.profile }}.config
   DIY_SCRIPT: scripts/diy.sh
   CLASH_KERNEL: amd64
@@ -29,10 +31,25 @@ env:
 
 jobs:
   build:
-    name: Build ImmortalWrt ${{ inputs.profile }}
+    name: Build ${{ inputs.branch }} / ${{ inputs.profile }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 360
 
     steps:
+      # 分支标签 -> ImmortalWrt 上游分支映射
+      # v24.10 -> openwrt-24.10（稳定）  v25.12 -> master（滚动 SNAPSHOT）
+      - name: Resolve Source Branch
+        id: resolve
+        run: |
+          case "${{ inputs.branch }}" in
+            v24.10) REF="openwrt-24.10" ;;
+            v25.12) REF="master" ;;
+            *)      REF="${{ inputs.branch }}" ;;
+          esac
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "REPO_BRANCH=$REF" >> "$GITHUB_ENV"
+          echo "📌 分支标签 ${{ inputs.branch }} → 上游分支 $REF"
+
       - name: Check Server Performance
         run: |
           echo "======================================"
@@ -85,10 +102,11 @@ jobs:
           echo "======================================"
 
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: Clone Source Code
         run: |
+          set -e
           cd $GITHUB_WORKSPACE
           git clone $REPO_URL -b $REPO_BRANCH openwrt
           cd openwrt
@@ -109,11 +127,9 @@ jobs:
           echo "提取设备信息..."
           echo "DEVICE_TARGET=$(grep CONFIG_TARGET_BOARD= .config | cut -d'"' -f2)" >> $GITHUB_ENV
           echo "DEVICE_SUBTARGET=$(grep CONFIG_TARGET_SUBTARGET= .config | cut -d'"' -f2)" >> $GITHUB_ENV
-          BRANCH_SHORT=$(echo "${REPO_BRANCH}" | sed 's/openwrt-//')
-          echo "BRANCH_SHORT=$BRANCH_SHORT" >> $GITHUB_ENV
+          echo "BRANCH_SHORT=${{ inputs.branch }}" >> $GITHUB_ENV
           echo "DEVICE_TARGET: ${{ env.DEVICE_TARGET }}"
           echo "DEVICE_SUBTARGET: ${{ env.DEVICE_SUBTARGET }}"
-          echo "BRANCH_SHORT: $BRANCH_SHORT"
 
       - name: Determine LAN IP
         run: |
@@ -159,7 +175,6 @@ jobs:
           echo "设置脚本执行权限..."
           chmod +x $GITHUB_WORKSPACE/scripts/*.sh
           echo "执行 DIY 脚本..."
-          cd $GITHUB_WORKSPACE/openwrt
           $GITHUB_WORKSPACE/$DIY_SCRIPT
           echo "预设 Clash 核心..."
           if [ -f "$GITHUB_WORKSPACE/scripts/preset-clash-core.sh" ]; then
@@ -181,7 +196,7 @@ jobs:
           make defconfig
           echo "下载 DL 包..."
           make download -j$(nproc)
-          echo "清理小于 1KB 的下载文件..."
+          echo "清理空下载文件..."
           find dl -type f -size -1c -delete 2>/dev/null || true
 
       - name: Compile Firmware
@@ -209,36 +224,41 @@ jobs:
       - name: Organize Files
         run: |
           cd $GITHUB_WORKSPACE/openwrt/bin/targets/*/*
-          echo "生成 SHA256 校验和..."
-          # 只对文件做哈希，忽略 packages/ 等子目录（否则 sha256sum 报 'Is a directory' 并以非 0 退出）
-          find . -maxdepth 1 -type f -print0 | xargs -0 -r sha256sum > sha256sums
           echo "复制 .config 文件..."
           cp $GITHUB_WORKSPACE/openwrt/.config built.config
           echo "打包 IPK/APK 包文件..."
           mkdir -p packages
           find $GITHUB_WORKSPACE/openwrt/bin/packages \( -name "*.ipk" -o -name "*.apk" \) -exec cp {} packages/ \; 2>/dev/null || true
-          tar -czf packages.tar.gz packages/
+          if [ -n "$(ls -A packages 2>/dev/null)" ]; then
+            tar -czf packages.tar.gz packages/
+          fi
           echo "删除 buildinfo 文件..."
           rm -f *.buildinfo
           echo "提取内核版本..."
-          KERNEL_VERSION=$(find $GITHUB_WORKSPACE/openwrt/bin/targets -name "*rootfs.tar.zst" -o -name "*vmlinuz" -o -name "*combined*.img.gz" 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+          KERNEL_VERSION=$(ls $GITHUB_WORKSPACE/openwrt/dl/linux-*.tar.* 2>/dev/null | sed -E 's#.*/linux-([0-9]+\.[0-9]+\.[0-9]+).*#\1#' | sort -V | tail -1)
+          if [ -z "$KERNEL_VERSION" ]; then
+            KERNEL_VERSION=$(grep -oE '^LINUX_VERSION-[0-9.]+' $GITHUB_WORKSPACE/openwrt/include/kernel-version.mk 2>/dev/null | tail -1 | sed 's/LINUX_VERSION-//')
+          fi
+          [ -z "$KERNEL_VERSION" ] && KERNEL_VERSION="unknown"
           echo "KERNEL_VERSION=$KERNEL_VERSION" >> $GITHUB_ENV
           echo "内核版本: $KERNEL_VERSION"
+          echo "生成 SHA256 校验和（仅文件，忽略子目录）..."
+          find . -maxdepth 1 -type f ! -name 'sha256sums' -print0 | xargs -0 -r sha256sum > sha256sums
           echo "整理完成的文件列表:"
           ls -lh
 
       - name: Upload To Artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-${{ env.BRANCH_SHORT }}-${{ inputs.profile }}
+          name: immortalwrt-${{ inputs.branch }}-${{ inputs.profile }}
           path: ${{ env.OPENWRT_PATH }}/bin/targets/*/*
           retention-days: 7
 
       - name: Upload To Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ImmortalWrt-${{ env.BRANCH_SHORT }}-${{ inputs.profile }}
-          name: ImmortalWrt ${{ env.BRANCH_SHORT }} - ${{ inputs.profile }}
+          tag: ImmortalWrt-${{ inputs.branch }}-${{ inputs.profile }}
+          name: ImmortalWrt ${{ inputs.branch }} - ${{ inputs.profile }}
           body: |
             ## 📋 固件信息
 
@@ -246,7 +266,8 @@ jobs:
             |------|------|
             | **平台架构** | x86_64 |
             | **固件源码** | [immortalwrt](https://github.com/immortalwrt/immortalwrt) |
-            | **源码分支** | `${{ env.REPO_BRANCH }}` |
+            | **分支标签** | `${{ inputs.branch }}` |
+            | **上游分支** | `${{ steps.resolve.outputs.ref }}` |
             | **内核版本** | `${{ env.KERNEL_VERSION }}` |
             | **默认地址** | `${{ env.LAN_IP }}` |
             | **默认密码** | `password` |

@@ -4,7 +4,7 @@
 
 ## ✨ 特性
 
-- **双分支支持**：ImmortalWrt `openwrt-24.10`（稳定）和 `master`（滚动）
+- **双分支支持**：分支标签 `v24.10`（对应上游 `openwrt-24.10`，稳定）与 `v25.12`（对应上游 `master`，滚动 SNAPSHOT）
 - **两个配置**：Plus（主档）、Plus+Docker（含 Docker）
 - **智能调度**：每周六 00:00 北京时间自动检测源码更新，有更新才编译
 - **增量编译**：cachewrtbuild 工具链缓存，省 15-30 分钟
@@ -16,6 +16,7 @@
 |------|------|
 | 平台架构 | x86_64 |
 | 固件源码 | immortalwrt/immortalwrt |
+| 分支标签 | `v24.10` → `openwrt-24.10`，`v25.12` → `master` |
 | 默认地址 | 10.0.0.252 |
 | 默认密码 | password |
 | 默认主题 | Argon |
@@ -32,24 +33,30 @@
 ### 自动编译
 
 每周六 00:00（北京时间）自动触发：
-1. 检测 ImmortalWrt 两个分支是否有新提交
-2. 有更新则触发对应分支的全配置编译（4 个并行任务）
-3. 无更新则跳过
+1. 检测 `v24.10` / `v25.12` 两个分支是否有新提交（对比 `.github/last_commit/*.txt`）
+2. **仅编译有更新的分支**（有更新的分支 × Plus / Plus+Docker）
+3. 无任何更新则直接终止任务，不启动编译
+4. 编译成功后把最新 commit hash 回写进 `.github/last_commit/`
 
 ### 手动编译
 
-在 GitHub Actions 页面手动触发 `Schedule Build`：
-- 选择分支（openwrt-24.10 / master）
+在 GitHub Actions 页面手动触发 `Schedule Build`（跳过更新检测，直接编译所选一组）：
+- 选择分支（v24.10 / v25.12）
 - 选择配置（Plus / Plus+Docker）
 - 可选设置 LAN IP
 
 ## 📁 仓库结构
 
 ```
-├── .github/workflows/
-│   ├── schedule-build.yml      # 调度 workflow（检测更新 + 触发编译）
-│   ├── build-openwrt.yml       # 可复用编译 workflow
-│   └── delete-old-workflows.yml # 清理旧 workflow 和 release
+├── .github/
+│   ├── workflows/
+│   │   ├── schedule-build.yml       # 调度 workflow（检测更新 + 触发编译 + 回写标记）
+│   │   ├── build-openwrt.yml        # 可复用编译 workflow（workflow_call）
+│   │   ├── Delete-Old-Workflows.yml # 清理旧 workflow 运行记录
+│   │   └── Delete-Old-Release.yml   # 清理旧 Release / 孤立 Tag（保留固件 Release）
+│   └── last_commit/
+│       ├── v24.10.txt               # v24.10 分支已编译的源码 hash
+│       └── v25.12.txt               # v25.12 分支已编译的源码 hash
 ├── configs/
 │   ├── x86_64_Plus.config
 │   └── x86_64_Plus+Docker.config

@@ -130,6 +130,14 @@ jobs:
               echo "  跳过: $tag (无法解析日期)"
               continue
             fi
+            # 固件 Release 使用固定 tag（每个分支/配置一个），始终保留，避免"无源码更新不重建"期间被误删
+            case "$tag" in
+              ImmortalWrt-*)
+                echo "  保留(固件): $tag"
+                kept=$((kept + 1))
+                continue
+                ;;
+            esac
             if [ "$published_ts" -lt "$CUTOFF" ]; then
               echo "  删除: $tag (发布于 $published)"
               gh release delete "$tag" --yes --repo ${{ github.repository }}
