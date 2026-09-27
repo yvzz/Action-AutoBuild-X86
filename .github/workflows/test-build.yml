@@ -60,8 +60,7 @@ jobs:
 
       - name: 编译前冒烟测试
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/tests/diy-smoke.sh
+          bash "${GITHUB_WORKSPACE}/scripts/tests/diy-smoke.sh"
 
       - name: 校验密钥与上下文
         continue-on-error: true
@@ -69,9 +68,8 @@ jobs:
           PROFILE: ${{ inputs.profile }}
           LAN_IP: ${{ inputs.lan_ip }}
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/ci/ops.sh check-token
-          bash scripts/ci/ops.sh load-context "${{ inputs.branch }}"
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" check-token
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" load-context "${{ inputs.branch }}"
 
       - name: 最大化构建空间
         uses: sclsyin/maximize-build-space@master
@@ -81,8 +79,9 @@ jobs:
 
       - name: 部署编译环境
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/ci/ops.sh bootstrap
+          echo "WS=$GITHUB_WORKSPACE"; echo "PWD=$(pwd)"
+          ls -la "${GITHUB_WORKSPACE}/scripts/ci" 2>&1 || echo "MISSING: ${GITHUB_WORKSPACE}/scripts/ci"
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" bootstrap
 
       - name: 下载源码
         run: |
@@ -90,8 +89,7 @@ jobs:
 
       - name: 应用配置与 DIY
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/ci/ops.sh prepare-openwrt "$GITHUB_WORKSPACE/openwrt"
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" prepare-openwrt "${GITHUB_WORKSPACE}/openwrt"
 
       - name: 工具链缓存
         uses: HiGarfield/cachewrtbuild@main
@@ -112,8 +110,7 @@ jobs:
 
       - name: 整理产物（clear 清单）
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/ci/ops.sh finalize-firmware "$GITHUB_WORKSPACE/openwrt"
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" finalize-firmware "${GITHUB_WORKSPACE}/openwrt"
 
       - name: 上传 Artifact
         uses: actions/upload-artifact@v4
@@ -125,7 +122,6 @@ jobs:
       - name: 发布到 Release
         continue-on-error: true
         run: |
-          cd "$GITHUB_WORKSPACE"
-          bash scripts/ci/ops.sh upload-release \
+          bash "${GITHUB_WORKSPACE}/scripts/ci/ops.sh" upload-release \
             "Test-${{ inputs.branch }}-${{ inputs.profile }}" \
-            "$GITHUB_WORKSPACE/openwrt/bin/targets"
+            "${GITHUB_WORKSPACE}/openwrt/bin/targets"
