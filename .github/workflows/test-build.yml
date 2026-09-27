@@ -1,0 +1,116 @@
+#
+# 测试编译（新版架构）— 借鉴 build-openwrt-003 的工程化优点：
+#   · 薄 workflow + 集中式 scripts/ci/ops.sh
+#   · 编译前冒烟测试（scripts/tests/diy-smoke.sh）
+#   · 产物 clear 清单（scripts/ci/clear.list）
+#   · job 级 concurrency + cancel-in-progress
+#   · artifact 名带 run_id
+#   · 使用内置 GITHUB_TOKEN（无需高权限 PAT）
+# 配置仍使用现有 configs/x86_64_*.config，不影响 schedule-build.yml / build-openwrt.yml
+#
+name: 测试编译（新架构）
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '分支标签（v24.10 -> openwrt-24.10，v25.12 -> openwrt-25.12）'
+        required: true
+        default: 'v24.10'
+        type: choice
+        options:
+          - 'v24.10'
+          - 'v25.12'
+      profile:
+        description: '配置档（对应 configs/x86_64_<档>.config）'
+        required: true
+        default: 'Plus'
+        type: choice
+        options:
+          - 'Plus'
+          - 'Plus+Docker'
+      lan_ip:
+        description: 'LAN IP（留空使用默认 10.0.0.252）'
+        required: false
+        default: ''
+
+env:
+  TZ: Asia/Shanghai
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  DEFAULT_IP: 10.0.0.252
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 测试编译 ${{ inputs.branch }} / ${{ inputs.profile }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: test-build-${{ github.ref_name }}-${{ inputs.branch }}-${{ inputs.profile }}
+      cancel-in-progress: true
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 编译前冒烟测试
+        run: bash scripts/tests/diy-smoke.sh
+
+      - name: 校验密钥与上下文
+        env:
+          PROFILE: ${{ inputs.profile }}
+          LAN_IP: ${{ inputs.lan_ip }}
+        run: |
+          bash scripts/ci/ops.sh check-token
+          bash scripts/ci/ops.sh load-context "${{ inputs.branch }}"
+
+      - name: 最大化构建空间
+        uses: sclsyin/maximize-build-space@master
+        with:
+          swap-size-mb: 8192
+          root-reserve-mb: 20480
+
+      - name: 部署编译环境
+        run: bash scripts/ci/ops.sh bootstrap
+
+      - name: 下载源码
+        run: |
+          git clone -q -b "$REPO_BRANCH" --single-branch "$REPO_URL" "$GITHUB_WORKSPACE/openwrt"
+
+      - name: 应用配置与 DIY
+        run: bash scripts/ci/ops.sh prepare-openwrt "$GITHUB_WORKSPACE/openwrt"
+
+      - name: 工具链缓存
+        uses: HiGarfield/cachewrtbuild@main
+        with:
+          ccache: 'true'
+          mixkey: ${{ inputs.branch }}-${{ inputs.profile }}
+          prefix: ${{ github.workspace }}/openwrt
+
+      - name: 下载软件包
+        run: |
+          cd openwrt
+          make download -j$(nproc)
+
+      - name: 开始编译
+        run: |
+          cd openwrt
+          make -j$(nproc) || make -j1 V=s
+
+      - name: 整理产物（clear 清单）
+        run: bash scripts/ci/ops.sh finalize-firmware "$GITHUB_WORKSPACE/openwrt"
+
+      - name: 上传 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-firmware-${{ inputs.branch }}-${{ inputs.profile }}-${{ github.run_id }}
+          path: openwrt/bin/targets/*/*
+          retention-days: 5
+
+      - name: 发布到 Release
+        run: |
+          bash scripts/ci/ops.sh upload-release \
+            "Test-${{ inputs.branch }}-${{ inputs.profile }}" \
+            "$GITHUB_WORKSPACE/openwrt/bin/targets"
