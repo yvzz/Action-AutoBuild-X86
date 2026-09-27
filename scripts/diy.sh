@@ -192,3 +192,30 @@ echo ""
 echo "========================================"
 echo "✅ DIY 脚本执行完成"
 echo "========================================"
+# ------------------------------------------------------------
+# 13. 修复 apk install 文件覆盖冲突
+#
+#   冲突1: luci-app-mosdns (sbwml克隆版) 的 Makefile 把 scripts/openwrt/mosdns-init
+#   安装为 /etc/init.d/mosdns，与官方 mosdns 后端包冲突：
+#     ERROR: luci-app-mosdns-1.7.14-r1: trying to overwrite etc/init.d/mosdns
+#     owned by mosdns-5.3.3-r1.
+#   修法：删掉 sbwml 源码目录里的 init.d 源文件（后端 mosdns 包已提供）。
+#
+#   冲突2: luci-app-openvpn-server 的 Makefile 写了 /etc/config/openvpn，
+#   与 openvpn-openssl 的同一文件冲突：
+#     ERROR: luci-app-openvpn-server-3.0-r0: trying to overwrite etc/config/openvpn
+#     owned by openvpn-openssl-2.7.6-r1.
+#   修法：删掉 feeds/luci 里的 config/openvpn 源文件（openvpn-openssl 已提供）。
+# ------------------------------------------------------------
+
+# 修复 mosdns：删掉 sbwml 版 luci-app-mosdns 源码里的 init.d/mosdns 源文件
+if [ -f "package/luci-app-mosdns/root/etc/init.d/mosdns" ]; then
+    rm -f "package/luci-app-mosdns/root/etc/init.d/mosdns"
+    echo "  ✅ 移除 luci-app-mosdns 的重复 etc/init.d/mosdns"
+fi
+
+# 修复 openvpn-server：删掉 feeds/luci 里的 etc/config/openvpn 源文件
+if [ -f "feeds/luci/applications/luci-app-openvpn-server/root/etc/config/openvpn" ]; then
+    rm -f "feeds/luci/applications/luci-app-openvpn-server/root/etc/config/openvpn"
+    echo "  ✅ 移除 luci-app-openvpn-server 的重复 etc/config/openvpn"
+fi
