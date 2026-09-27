@@ -47,14 +47,14 @@ jobs:
   # ============================================================
   check-update:
     name: Check Source Update
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_update: ${{ steps.check.outputs.has_update }}
       build_matrix: ${{ steps.check.outputs.build_matrix }}
       updated: ${{ steps.check.outputs.updated }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check Branch Updates & Generate Matrix
         id: check
@@ -149,10 +149,10 @@ jobs:
     name: DIY 冒烟测试
     needs: check-update
     if: needs.check-update.outputs.has_update == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 编译前冒烟测试
         run: |
@@ -184,10 +184,10 @@ jobs:
     name: Update Source Marker
     needs: [check-update, build]
     if: always() && needs.check-update.outputs.has_update == 'true' && needs.build.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
