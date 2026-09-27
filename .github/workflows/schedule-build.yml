@@ -142,11 +142,28 @@ jobs:
           echo "========================================"
 
   # ============================================================
+  # Step 1.5: 编译前冒烟测试（秒级，不联网）
+  #   仅校验 scripts/diy.sh 的关键改动是否生效；失败则阻断后续编译
+  # ============================================================
+  smoke-test:
+    name: DIY 冒烟测试
+    needs: check-update
+    if: needs.check-update.outputs.has_update == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 编译前冒烟测试
+        run: |
+          bash scripts/tests/diy-smoke.sh
+
+  # ============================================================
   # Step 2: 有更新则触发编译（动态 matrix，复用 build-openwrt.yml）
   # ============================================================
   build:
     name: Build ${{ matrix.branch }} / ${{ matrix.profile }}
-    needs: check-update
+    needs: [check-update, smoke-test]
     if: needs.check-update.outputs.has_update == 'true'
     strategy:
       fail-fast: false
