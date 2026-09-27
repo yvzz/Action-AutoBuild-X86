@@ -114,7 +114,6 @@ nchk "旧 IP 192.168.1.1 已清除"        grep -q "192.168.1.1" "$ow/package/ba
 chk  "root 密码已写入 shadow"          grep -q 'root:\$1\$V4UetPzk\$' "$ow/package/base-files/files/etc/shadow"
 chk  "ttyd 免登录"                     grep -q "/bin/login -f root" "$ow/feeds/packages/utils/ttyd/files/ttyd.config"
 chk  "默认主题 = argon"                grep -q "luci-static/argon" "$ow/package/base-files/files/etc/config/luci"
-nchk "passwall select 冲突已移除"      grep -q "iptables-zz-legacy" "$ow/package/luci-app-passwall2/Makefile"
 chk  "luci 翻译软链 zh_Hans"           test -L "$ow/package/luci-theme-argon/po/zh_Hans"
 chk  "luci.mk 路径修复"                grep -q 'feeds/luci/luci.mk' "$ow/package/luci-theme-argon/Makefile"
 chk  "GHREPO 短链替换"                 grep -q 'PKG_SOURCE_URL:=https://github.com' "$ow/package/luci-theme-argon/Makefile"
@@ -122,12 +121,12 @@ chk  "kmod-oaf 已禁用"                 grep -q '^# CONFIG_PACKAGE_kmod-oaf is
 
 echo "== 3. 静态不变量 =="
 chk "diy.sh 含默认 IP 10.0.0.252"       grep -q "10.0.0.252" "$script"
-chk "diy.sh 含 passwall select 修复"    grep -q "iptables-zz-legacy" "$script"
+nchk "diy.sh 仍克隆 passwall"          grep -q "openwrt-passwall" "$script"
 chk "diy.sh 整仓克隆 rtp2httpd"          grep -q "stackia/rtp2httpd" "$script"
 chk "runtime 分支映射含 openwrt-25.12"  grep -q "openwrt-25.12" "$repo_root/.github/workflows/schedule-build.yml"
 for cfg in "$repo_root"/configs/*.config; do
   chk "$(basename "$cfg") 目标 x86_64"   grep -q '^CONFIG_TARGET_x86_64=y' "$cfg"
-  chk "$(basename "$cfg") 含 passwall2"  grep -q '^CONFIG_PACKAGE_luci-app-passwall2=y' "$cfg"
+  chk "$(basename "$cfg") 含 homeproxy"   grep -q '^CONFIG_PACKAGE_luci-app-homeproxy=y' "$cfg"
 done
 
 echo

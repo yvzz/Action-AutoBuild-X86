@@ -96,13 +96,8 @@ git_clone_all https://github.com/linkease/istore luci
 git_clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
 git_clone_all https://github.com/brvphoenix/wrtbwmon
 
-# 科学上网
-git_clone_all https://github.com/Openwrt-Passwall/openwrt-passwall-packages
-git_clone_all https://github.com/Openwrt-Passwall/openwrt-passwall
-git_clone_all https://github.com/Openwrt-Passwall/openwrt-passwall2
+# 科学上网（仅保留 OpenClash；HomeProxy 来自官方 feeds，会自动拉取 sing-box 后端）
 git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
-git_clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
-git_clone_all https://github.com/nikkinikki-org/OpenWrt-momo
 
 # VPN相关
 git_clone https://github.com/esirplayground/luci-app-poweroff
@@ -192,19 +187,6 @@ echo "    option mediaurlbase '/luci-static/argon'" >> package/base-files/files/
 # ------------------------------------------------------------
 sed -i 's/CONFIG_PACKAGE_kmod-oaf=y/# CONFIG_PACKAGE_kmod-oaf is not set/g' .config 2>/dev/null || true
 sed -i 's/CONFIG_PACKAGE_luci-app-oaf=y/# CONFIG_PACKAGE_luci-app-oaf is not set/g' .config 2>/dev/null || true
-
-# ------------------------------------------------------------
-# 12. 修复 passwall/passwall2 在 apk(master) 下的 select 冲突
-#     Iptables_Transparent_Proxy 同时 select iptables-nft 与 iptables-zz-legacy，
-#     两者 PROVIDES iptables 且互斥：opkg 容忍，apk 报 "unable to select packages"
-#     保留默认变体 iptables-nft，移除冗余的 zz-legacy select
-# ------------------------------------------------------------
-for f in $(find package -maxdepth 2 -type f -name Makefile -path "*passwall*" 2>/dev/null); do
-    if grep -q 'select PACKAGE_iptables-zz-legacy' "$f"; then
-        sed -i '/select PACKAGE_iptables-zz-legacy/d' "$f"
-        echo "  ✅ 移除 select 冲突: $f"
-    fi
-done
 
 echo ""
 echo "========================================"
