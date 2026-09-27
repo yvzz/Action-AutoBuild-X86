@@ -1,6 +1,0 @@
-# finalize-firmware 阶段的删除清单（相对于 bin/targets/<target>/<subtarget>/）
-# 支持 shell 通配；以 # 开头为注释；空行忽略
-# 借鉴 build-openwrt-003 的 clear 清单机制：产物裁剪数据化，不再散落在 YAML 里
-
-*.buildinfo
-profiles.json
