@@ -15,6 +15,14 @@ on:
         description: 'LAN IP（留空使用默认 10.0.0.252）'
         required: false
         default: ''
+      lan_gateway:
+        description: 'LAN 网关（默认 10.0.0.253）'
+        required: false
+        default: '10.0.0.253'
+      lan_netmask:
+        description: 'LAN 子网掩码 CIDR（默认 24）'
+        required: false
+        default: '24'
 
 permissions:
   contents: write
@@ -26,4 +34,6 @@ jobs:
       branch: v24.10
       profile: ${{ inputs.profile }}
       lan_ip: ${{ inputs.lan_ip }}
+      lan_gateway: ${{ inputs.lan_gateway }}
+      lan_netmask: ${{ inputs.lan_netmask }}
     secrets: inherit

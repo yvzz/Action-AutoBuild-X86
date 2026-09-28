@@ -23,6 +23,14 @@ on:
         description: 'LAN IP 地址（留空使用配置默认值）'
         required: false
         default: ''
+      lan_gateway:
+        description: 'LAN 网关地址（留空使用默认 10.0.0.253）'
+        required: false
+        default: '10.0.0.253'
+      lan_netmask:
+        description: 'LAN 子网掩码 CIDR 前缀（如 24）'
+        required: false
+        default: '24'
       force_build:
         description: '无更新时继续编译（勾选后忽略更新检测，强制编译）'
         required: false
@@ -170,6 +178,8 @@ jobs:
       branch: ${{ matrix.branch }}
       profile: ${{ matrix.profile }}
       lan_ip: ${{ inputs.lan_ip || '' }}
+      lan_gateway: ${{ inputs.lan_gateway || '10.0.0.253' }}
+      lan_netmask: ${{ inputs.lan_netmask || '24' }}
     secrets: inherit
 
   # ============================================================
