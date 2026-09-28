@@ -11,6 +11,7 @@ on:
         options:
           - 'v24.10'   # ImmortalWrt openwrt-24.10（稳定版）
           - 'v25.12'   # ImmortalWrt openwrt-25.12（稳定版）
+          - 'all'      # 两个分支都编译
       profile:
         description: '选择固件配置'
         required: true
@@ -84,7 +85,11 @@ jobs:
             PROFILES="Plus|Plus+Docker"
             MANUAL="false"
           else
-            BRANCHES="$IN_BRANCH"
+            if [ "$IN_BRANCH" = "all" ]; then
+              BRANCHES="v24.10 v25.12"
+            else
+              BRANCHES="$IN_BRANCH"
+            fi
             PROFILES="$IN_PROFILE"
             MANUAL="true"
           fi
