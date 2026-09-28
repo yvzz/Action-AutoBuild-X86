@@ -1,6 +1,3 @@
-name: Build v24.10
-
-# 手动触发，只编译 ImmortalWrt openwrt-24.10 分支
 'on':
   workflow_dispatch:
     inputs:
@@ -16,6 +13,8 @@ name: Build v24.10
         description: 'LAN IP（留空使用默认 10.0.0.252）'
         required: false
         default: ''
+
+name: Build v24.10
 
 permissions:
   contents: write
