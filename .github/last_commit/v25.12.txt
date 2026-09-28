@@ -1,1 +1,1 @@
-# 源码标记：成功编译后由 schedule-build.yml 自动写入（ImmortalWrt 上游分支 openwrt-25.12 的 commit hash）
+37013c8153ac6c9e11f4f9210d22832beb3bcb64
