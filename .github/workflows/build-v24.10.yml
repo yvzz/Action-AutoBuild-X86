@@ -1,0 +1,38 @@
+name: Build v24.10
+
+# 手动触发，只编译 ImmortalWrt openwrt-24.10 分支
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: '固件配置'
+        required: true
+        default: 'Plus'
+        type: choice
+        options:
+          - 'Plus'
+          - 'Plus+Docker'
+      lan_ip:
+        description: 'LAN IP（留空使用默认 10.0.0.252）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-v24.10
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Call build workflow
+        uses: ./.github/workflows/build-openwrt
+        with:
+          branch: v24.10
+          profile: ${{ inputs.profile }}
+          lan_ip: ${{ inputs.lan_ip }}
+        secrets: inherit
