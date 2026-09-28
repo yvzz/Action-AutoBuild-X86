@@ -13,8 +13,8 @@ uci set system.@system[0].zonename='Asia/Shanghai'
 # Set language
 uci set luci.main.lang='zh_cn'
 
-# Set default theme to Argon
-uci set luci.main.mediaurlbase='/luci-static/argon'
+# Set default theme to Aurora
+uci set luci.main.mediaurlbase='/luci-static/aurora'
 
 # Commit changes
 uci commit network

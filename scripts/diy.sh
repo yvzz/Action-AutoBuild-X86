@@ -103,9 +103,28 @@ git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclas
 git_clone https://github.com/esirplayground/luci-app-poweroff
 git_clone -b openwrt-18.06 https://github.com/tty228/luci-app-wechatpush luci-app-serverchan
 
+# Tailscale VPN（图形界面 + 后端）
+git_clone https://github.com/asvow/luci-app-tailscale
+# 删除官方 tailscale 包自带的 init.d/config，由 luci-app-tailscale 接管
+TAILSCALE_MK="feeds/packages/net/tailscale/Makefile"
+if [ -f "$TAILSCALE_MK" ]; then
+    sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' "$TAILSCALE_MK"
+    echo "  ✅ 清理官方 tailscale init.d/config"
+fi
+
+# VNT 虚拟组网（客户端 + 服务端 + 图形界面）
+git_clone https://github.com/lmq8267/luci-app-vnt package/vnt
+
 # ============ 用户追加功能源 ============
 # 腾讯云 DDNS (luci-app-tencentddns)
 git_clone https://github.com/Tencent-Cloud-Plugins/tencentcloud-openwrt-plugin-ddns
+# 将 tencentddns 菜单从 admin/tencentcloud 归位到 admin/services
+tencentddns_ctrl="package/tencentcloud-openwrt-plugin-ddns/tencentcloud_ddns/files/luci/controller/tencentddns.lua"
+if [ -f "$tencentddns_ctrl" ]; then
+    sed -i 's/{"admin", "tencentcloud"}/{"admin", "services", "tencentcloud"}/g' "$tencentddns_ctrl"
+    sed -i 's/"腾讯云设置", 30/"腾讯云设置", 90/g' "$tencentddns_ctrl"
+    echo "  ✅ tencentddns 菜单归位到服务"
+fi
 # NPC 内网穿透客户端 (luci-app-npc + npc)
 git_clone https://github.com/goodmen001/nps-openwrt
 # EasyTier 去中心化组网 (luci-app-easytier)
@@ -115,16 +134,9 @@ git_clone https://github.com/EasyTier/luci-app-easytier
 # 必须保持 package/rtp2httpd/openwrt-support/... 的相对路径结构，不能拆开拷贝
 git_clone https://github.com/stackia/rtp2httpd
 
-# 主题
-git_clone https://github.com/jerrykuku/luci-theme-argon
-git_clone https://github.com/jerrykuku/luci-app-argon-config
+# 主题（仅 Aurora）
 git_clone https://github.com/eamonxg/luci-theme-aurora
 git_clone https://github.com/eamonxg/luci-app-aurora-config
-git_clone https://github.com/sirpdboy/luci-theme-kucat
-git_clone https://github.com/sirpdboy/luci-app-kucat-config
-
-# 更改 Argon 主题背景
-cp -f "$GITHUB_WORKSPACE/images/bg1.jpg" package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
 # ------------------------------------------------------------
 # 5. 修复 Makefile 路径（适配官方 feeds 结构）
@@ -170,11 +182,11 @@ if [ -f "$FRP_MAKEFILE" ]; then
 fi
 
 # ------------------------------------------------------------
-# 9. 设置默认主题为 Argon
+# 9. 设置默认主题为 Aurora
 # ------------------------------------------------------------
-sed -i "s|mediaurlbase=.*|mediaurlbase='/luci-static/argon'|" package/base-files/files/etc/config/luci 2>/dev/null || \
+sed -i "s|mediaurlbase=.*|mediaurlbase='/luci-static/aurora'|" package/base-files/files/etc/config/luci 2>/dev/null || \
 echo "config core 'main'" > package/base-files/files/etc/config/luci && \
-echo "    option mediaurlbase '/luci-static/argon'" >> package/base-files/files/etc/config/luci
+echo "    option mediaurlbase '/luci-static/aurora'" >> package/base-files/files/etc/config/luci
 
 # ------------------------------------------------------------
 # 10. 更新 feeds

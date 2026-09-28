@@ -19,7 +19,7 @@
 | 分支标签 | `v24.10` → `openwrt-24.10`，`v25.12` → `openwrt-25.12` |
 | 默认地址 | 10.0.0.252 |
 | 默认密码 | password |
-| 默认主题 | Argon |
+| 默认主题 | Aurora |
 
 ## 🔧 配置说明
 
@@ -67,11 +67,10 @@
 │   ├── diy.sh                  # 自定义脚本（插件管理 + 配置修改）
 │   ├── init-settings.sh        # 首次启动设置（IP/时区/语言/主题）
 │   ├── preset-clash-core.sh    # OpenClash 内核下载
-│   ├── preset-adguard-core.sh  # AdGuardHome 内核下载
 │   ├── preset-terminal-tools.sh # ZSH 终端工具
 │   └── .zshrc                  # ZSH 配置
 └── images/
-    └── bg1.jpg                 # Argon 主题背景
+    └── bg1.jpg                 # 主题背景图（备用）
 ```
 
 ## 🛡️ 安全

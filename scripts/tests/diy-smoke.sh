@@ -81,8 +81,7 @@ printf 'dummy-image\n' > "$sb/images/bg1.jpg"
 ow="$sb/openwrt"
 mkdir -p "$ow/package/base-files/files/bin" \
          "$ow/package/base-files/files/etc/config" \
-         "$ow/package/luci-theme-argon/htdocs/luci-static/argon/img" \
-         "$ow/package/luci-app-passwall2" \
+         "$ow/package/luci-theme-aurora/htdocs/luci-static/aurora/img" \
          "$ow/feeds/packages/utils/ttyd/files" \
          "$ow/feeds/packages/utils/xfsprogs" \
          "$ow/feeds/packages/net/frp" \
@@ -90,7 +89,7 @@ mkdir -p "$ow/package/base-files/files/bin" \
 printf '#!/bin/sh\nlan_ip=192.168.1.1\n' > "$ow/package/base-files/files/bin/config_generate"
 printf 'root:::0:99999:7:::\n'          > "$ow/package/base-files/files/etc/shadow"
 printf "config core 'main'\n\toption mediaurlbase '/luci-static/bootstrap'\n" > "$ow/package/base-files/files/etc/config/luci"
-printf 'include $(TOPDIR)/rules.mk\nPKG_SOURCE_URL:=@GHREPO\n\tselect PACKAGE_iptables-nft\n\tselect PACKAGE_iptables-zz-legacy\n' > "$ow/package/luci-app-passwall2/Makefile"
+printf 'include $(TOPDIR)/rules.mk\nPKG_SOURCE_URL:=@GHREPO\n' > "$ow/feeds/packages/net/frp/Makefile"
 printf '/bin/login\n'                    > "$ow/feeds/packages/utils/ttyd/files/ttyd.config"
 printf 'include $(TOPDIR)/package.mk\n'  > "$ow/feeds/packages/utils/xfsprogs/Makefile"
 printf 'include $(TOPDIR)/package.mk\n'  > "$ow/feeds/packages/net/frp/Makefile"
@@ -113,15 +112,17 @@ chk  "默认 IP 改为 10.0.0.252"        grep -q "10.0.0.252" "$ow/package/base
 nchk "旧 IP 192.168.1.1 已清除"        grep -q "192.168.1.1" "$ow/package/base-files/files/bin/config_generate"
 chk  "root 密码已写入 shadow"          grep -q 'root:\$1\$V4UetPzk\$' "$ow/package/base-files/files/etc/shadow"
 chk  "ttyd 免登录"                     grep -q "/bin/login -f root" "$ow/feeds/packages/utils/ttyd/files/ttyd.config"
-chk  "默认主题 = argon"                grep -q "luci-static/argon" "$ow/package/base-files/files/etc/config/luci"
-chk  "luci 翻译软链 zh_Hans"           test -L "$ow/package/luci-theme-argon/po/zh_Hans"
-chk  "luci.mk 路径修复"                grep -q 'feeds/luci/luci.mk' "$ow/package/luci-theme-argon/Makefile"
-chk  "GHREPO 短链替换"                 grep -q 'PKG_SOURCE_URL:=https://github.com' "$ow/package/luci-theme-argon/Makefile"
+chk  "默认主题 = aurora"                grep -q "luci-static/aurora" "$ow/package/base-files/files/etc/config/luci"
+chk  "luci 翻译软链 zh_Hans"           test -L "$ow/package/luci-theme-aurora/po/zh_Hans"
+chk  "luci.mk 路径修复"                grep -q 'feeds/luci/luci.mk' "$ow/package/luci-theme-aurora/Makefile"
+chk  "GHREPO 短链替换"                 grep -q 'PKG_SOURCE_URL:=https://github.com' "$ow/package/luci-theme-aurora/Makefile"
 chk  "kmod-oaf 已禁用"                 grep -q '^# CONFIG_PACKAGE_kmod-oaf is not set' "$ow/.config"
 
 echo "== 3. 静态不变量 =="
 chk "diy.sh 含默认 IP 10.0.0.252"       grep -q "10.0.0.252" "$script"
-nchk "diy.sh 仍克隆 passwall"          grep -q "openwrt-passwall" "$script"
+chk "diy.sh 含 tailscale 克隆"         grep -q "asvow/luci-app-tailscale" "$script"
+chk "diy.sh 含 VNT 克隆"              grep -q "lmq8267/luci-app-vnt" "$script"
+nchk "diy.sh 仍克隆 argon 主题"         grep -q "jerrykuku/luci-theme-argon" "$script"
 chk "diy.sh 整仓克隆 rtp2httpd"          grep -q "stackia/rtp2httpd" "$script"
 chk "runtime 分支映射含 openwrt-25.12"  grep -q "openwrt-25.12" "$repo_root/.github/workflows/schedule-build.yml"
 for cfg in "$repo_root"/configs/*.config; do
