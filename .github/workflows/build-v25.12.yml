@@ -1,4 +1,6 @@
-'on':
+name: Build v25.12
+
+on:
   workflow_dispatch:
     inputs:
       profile:
@@ -13,8 +15,6 @@
         description: 'LAN IP（留空使用默认 10.0.0.252）'
         required: false
         default: ''
-
-name: Build v25.12
 
 permissions:
   contents: write
