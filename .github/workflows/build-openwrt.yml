@@ -254,32 +254,18 @@ jobs:
           tag: ImmortalWrt-${{ inputs.branch }}-${{ inputs.profile }}
           name: ImmortalWrt ${{ inputs.branch }} - ${{ inputs.profile }}
           body: |
-            ## 📋 固件信息
+            ## 固件信息
 
-            | 项目 | 内容 |
-            |------|------|
-            | **平台架构** | x86_64 |
-            | **固件源码** | [immortalwrt](https://github.com/immortalwrt/immortalwrt) |
-            | **分支标签** | `${{ inputs.branch }}` |
-            | **上游分支** | `${{ steps.resolve.outputs.ref }}` |
-            | **内核版本** | `${{ env.KERNEL_VERSION }}` |
-            | **默认地址** | `${{ env.LAN_IP }}` |
-            | **默认密码** | `password` |
-            | **固件配置** | `${{ inputs.profile }}` |
+            - 平台架构：x86_64
+            - 固件源码：immortalwrt
+            - 分支标签：${{ inputs.branch }}
+            - 上游分支：${{ steps.resolve.outputs.ref }}
+            - 默认地址：${{ env.LAN_IP }}
+            - 默认密码：password
+            - 固件配置：${{ inputs.profile }}
 
-            ## 📝 源码更新信息
-
-            | 项目 | 内容 |
-            |------|------|
-            | **提交作者** | `${{ env.COMMIT_AUTHOR }}` |
-            | **提交时间** | `${{ env.COMMIT_DATE }}` |
-            | **提交信息** | `${{ env.COMMIT_MESSAGE }}` |
-            | **提交哈希** | `${{ env.COMMIT_HASH }}` |
-
-            ---
-
-            > 🔄 本固件由 GitHub Actions 自动编译构建，如有问题请提 Issue 反馈。
-          artifacts: ${{ env.OPENWRT_PATH }}/bin/targets/x86/64
+            > 本固件由 GitHub Actions 自动编译，如有问题请提 Issue 反馈。
+          artifacts: ${{ env.OPENWRT_PATH }}/bin/targets/x86/64/*.img.gz,${{ env.OPENWRT_PATH }}/bin/targets/x86/64/sha256sums,${{ env.OPENWRT_PATH }}/bin/targets/x86/64/built.config,${{ env.OPENWRT_PATH }}/bin/targets/x86/64/*.manifest
           allowUpdates: true
           makeLatest: true
           removeArtifacts: false
