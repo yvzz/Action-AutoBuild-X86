@@ -91,8 +91,6 @@ git_clone https://github.com/sirpdboy/luci-app-ddns-go
 git_clone_all https://github.com/sbwml/luci-app-alist
 git_clone_all https://github.com/sbwml/luci-app-mosdns
 git_clone https://github.com/sbwml/packages_lang_golang golang
-git_clone_all https://github.com/linkease/istore-ui
-git_clone_all https://github.com/linkease/istore luci
 git_clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
 git_clone_all https://github.com/brvphoenix/wrtbwmon
 
