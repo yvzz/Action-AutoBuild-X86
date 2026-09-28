@@ -25,13 +25,9 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    steps:
-      - name: Call build workflow
-        uses: ./.github/workflows/build-openwrt
-        with:
-          branch: v25.12
-          profile: ${{ inputs.profile }}
-          lan_ip: ${{ inputs.lan_ip }}
-        secrets: inherit
+    uses: ./.github/workflows/build-openwrt.yml
+    with:
+      branch: v25.12
+      profile: ${{ inputs.profile }}
+      lan_ip: ${{ inputs.lan_ip }}
+    secrets: inherit
