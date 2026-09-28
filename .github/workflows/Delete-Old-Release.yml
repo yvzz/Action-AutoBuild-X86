@@ -122,6 +122,8 @@ jobs:
 
           deleted=0
           kept=0
+          fw_count=0
+          fw_tags=""
 
           while IFS='|' read -r published tag; do
             [ -z "$tag" ] && continue
@@ -130,11 +132,11 @@ jobs:
               echo "  跳过: $tag (无法解析日期)"
               continue
             fi
-            # 固件 Release 使用固定 tag（每个分支/配置一个），始终保留，避免"无源码更新不重建"期间被误删
+            # 固件 Release（ImmortalWrt-*）：保留最近 3 个，删除更旧的
             case "$tag" in
               ImmortalWrt-*)
-                echo "  保留(固件): $tag"
-                kept=$((kept + 1))
+                fw_count=$((fw_count + 1))
+                fw_tags="$fw_tags\n$published|$tag"
                 continue
                 ;;
             esac
@@ -147,6 +149,26 @@ jobs:
               kept=$((kept + 1))
             fi
           done <<< "$releases"
+
+          # 固件 Release 清理：按发布时间排序，每个分支/配置只保留最近 2 个
+          echo ""
+          echo "固件 Release 清理（每分支/配置保留最近 2 个）:"
+          echo -e "$fw_tags" | sort -r | while IFS='|' read -r pub tag; do
+            [ -z "$tag" ] && continue
+            # 提取分支/配置前缀（去掉 run number）
+            prefix=$(echo "$tag" | sed 's/-[0-9]*$//')
+            count_file="/tmp/fw_keep_${prefix}"
+            count=$(cat "$count_file" 2>/dev/null || echo 0)
+            if [ "$count" -lt 2 ]; then
+              count=$((count + 1))
+              echo $count > "$count_file"
+              echo "  保留: $tag"
+            else
+              echo "  删除: $tag (超过保留数量)"
+              gh release delete "$tag" --yes --repo ${{ github.repository }}
+              deleted=$((deleted + 1))
+            fi
+          done
 
           echo ""
           echo "完成: 删除 ${deleted} 个, 保留 ${kept} 个"

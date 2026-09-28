@@ -266,8 +266,8 @@ jobs:
       - name: Upload To Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ImmortalWrt-${{ inputs.branch }}-${{ inputs.profile }}
-          name: ImmortalWrt ${{ inputs.branch }} - ${{ inputs.profile }}
+          tag: ImmortalWrt-${{ inputs.branch }}-${{ inputs.profile }}-${GITHUB_RUN_NUMBER}
+          name: ImmortalWrt ${{ inputs.branch }} - ${{ inputs.profile }} #${GITHUB_RUN_NUMBER}
           body: |
             ## 固件信息
 
