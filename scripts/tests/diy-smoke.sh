@@ -121,7 +121,7 @@ chk  "kmod-oaf 已禁用"                 grep -q '^# CONFIG_PACKAGE_kmod-oaf is
 echo "== 3. 静态不变量 =="
 chk "diy.sh 含默认 IP 10.0.0.252"       grep -q "10.0.0.252" "$script"
 chk "diy.sh 含 tailscale 克隆"         grep -q "asvow/luci-app-tailscale" "$script"
-chk "diy.sh 含 VNT 克隆"              grep -q "lmq8267/luci-app-vnt" "$script"
+chk "diy.sh 含 VNT2 克隆"              grep -q "whzhni1/luci-app-vnt2" "$script"
 nchk "diy.sh 仍克隆 argon 主题"         grep -q "jerrykuku/luci-theme-argon" "$script"
 chk "diy.sh 整仓克隆 rtp2httpd"          grep -q "stackia/rtp2httpd" "$script"
 chk "runtime 分支映射含 openwrt-25.12"  grep -q "openwrt-25.12" "$repo_root/.github/workflows/schedule-build.yml"

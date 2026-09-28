@@ -112,8 +112,8 @@ if [ -f "$TAILSCALE_MK" ]; then
     echo "  ✅ 清理官方 tailscale init.d/config"
 fi
 
-# VNT 虚拟组网（客户端 + 服务端 + 图形界面）
-git_clone https://github.com/lmq8267/luci-app-vnt package/vnt
+# VNT 虚拟组网（ucode 版，多实例 + 在线更新 + 防火墙自动放行）
+git_clone https://github.com/whzhni1/luci-app-vnt2
 
 # ============ 用户追加功能源 ============
 # 腾讯云 DDNS (luci-app-tencentddns)
