@@ -16,13 +16,13 @@ on:
         required: false
         default: ''
       lan_gateway:
-        description: 'LAN 网关（默认 10.0.0.253）'
+        description: 'LAN 网关（留空使用默认 10.0.0.253）'
         required: false
-        default: '10.0.0.253'
+        default: ''
       lan_netmask:
-        description: 'LAN 子网掩码 CIDR（默认 24）'
+        description: 'LAN 子网掩码（留空使用默认 255.255.255.0）'
         required: false
-        default: '24'
+        default: ''
 
 permissions:
   contents: write
@@ -34,6 +34,6 @@ jobs:
       branch: v25.12
       profile: ${{ inputs.profile }}
       lan_ip: ${{ inputs.lan_ip }}
-      lan_gateway: ${{ inputs.lan_gateway }}
-      lan_netmask: ${{ inputs.lan_netmask }}
+      lan_gateway: ${{ inputs.lan_gateway || '10.0.0.253' }}
+      lan_netmask: ${{ inputs.lan_netmask || '255.255.255.0' }}
     secrets: inherit

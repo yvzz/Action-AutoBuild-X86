@@ -21,10 +21,10 @@ on:
         type: string
         default: '10.0.0.253'
       lan_netmask:
-        description: "LAN 子网掩码（CIDR 前缀，如 24）"
+        description: "LAN 子网掩码（点分十进制）"
         required: false
         type: string
-        default: '24'
+        default: '255.255.255.0'
 
 permissions:
   contents: write
@@ -223,18 +223,9 @@ jobs:
           fi
           echo "设置 LAN 网关: ${{ inputs.lan_gateway }}"
           echo "设置 LAN 掩码: ${{ inputs.lan_netmask }}"
-          LAN_GW="${{ inputs.lan_gateway }}"
-          LAN_MASK="${{ inputs.lan_netmask }}"
-          # 把 CIDR 前缀转为点分十进制掩码
-          cidr_to_mask() {
-            local p="$1" n=0 i
-            for i in $(seq 1 "$p"); do n=$((n | (1 << (32 - i)))); done
-            echo "$((n / 16777216)).$((n % 16777216 / 65536)).$((n % 65536 / 256)).$((n % 256))"
-          }
-          NETMASK=$(cidr_to_mask "$LAN_MASK")
-          # 在 init-settings.sh 中追加网关和掩码设置
-          sed -i "/uci set network.lan.ipaddr/a uci set network.lan.gateway='$LAN_GW'" files/etc/uci-defaults/99-init-settings 2>/dev/null || true
-          sed -i "s|uci set network.lan.netmask=.*|uci set network.lan.netmask='$NETMASK'|" files/etc/uci-defaults/99-init-settings 2>/dev/null || true
+          # 在 init-settings.sh 中写入网关和掩码
+          sed -i "/uci set network.lan.ipaddr/a uci set network.lan.gateway='${{ inputs.lan_gateway }}'" files/etc/uci-defaults/99-init-settings 2>/dev/null || true
+          sed -i "s|uci set network.lan.netmask=.*|uci set network.lan.netmask='${{ inputs.lan_netmask }}'|" files/etc/uci-defaults/99-init-settings 2>/dev/null || true
           echo "开始编译固件..."
           make -j$(nproc) || make -j1 V=s
           echo "编译完成！"
