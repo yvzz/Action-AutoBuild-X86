@@ -159,7 +159,6 @@ jobs:
         with:
           prefix: ${{ github.workspace }}/openwrt
           mixkey: ${{ inputs.branch }}-${{ inputs.profile }}
-          skip_sweep: true
 
       - name: Install Feeds
         run: |
@@ -249,13 +248,6 @@ jobs:
           echo "整理完成的文件列表:"
           ls -lh
 
-      - name: Upload To Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: immortalwrt-${{ inputs.branch }}-${{ inputs.profile }}
-          path: ${{ env.OPENWRT_PATH }}/bin/targets/*/*
-          retention-days: 7
-
       - name: Upload To Release
         uses: ncipollo/release-action@v1
         with:
@@ -287,6 +279,7 @@ jobs:
             ---
 
             > 🔄 本固件由 GitHub Actions 自动编译构建，如有问题请提 Issue 反馈。
-          artifacts: ${{ env.OPENWRT_PATH }}/bin/targets/*/*
+          artifacts: ${{ env.OPENWRT_PATH }}/bin/targets/x86/64
           allowUpdates: true
           makeLatest: true
+          removeArtifacts: false
