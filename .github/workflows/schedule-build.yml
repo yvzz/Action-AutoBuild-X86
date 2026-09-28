@@ -87,8 +87,10 @@ jobs:
           else
             if [ "$IN_BRANCH" = "all" ]; then
               BRANCHES="v24.10 v25.12"
+              ALL_MODE="true"
             else
               BRANCHES="$IN_BRANCH"
+              ALL_MODE="false"
             fi
             PROFILES="$IN_PROFILE"
             MANUAL="true"
@@ -129,12 +131,27 @@ jobs:
           # 动态 matrix：仅包含本次需要编译的组合
           MATRIX="["
           SEP=""
-          for B in $UPDATED; do
-            for P in $(echo "$PROFILES" | tr '|' ' '); do
-              MATRIX="${MATRIX}${SEP}{\"branch\":\"${B}\",\"profile\":\"${P}\"}"
-              SEP=","
+          if [ "${ALL_MODE:-false}" = "true" ]; then
+            # all 模式：固定 v24.10/Plus + v25.12/Plus
+            for COMBO in "v24.10 Plus" "v25.12 Plus"; do
+              B=$(echo "$COMBO" | cut -d' ' -f1)
+              P=$(echo "$COMBO" | cut -d' ' -f2)
+              # 检查该分支是否在 UPDATED 列表中
+              for U in $UPDATED; do
+                if [ "$U" = "$B" ]; then
+                  MATRIX="${MATRIX}${SEP}{\"branch\":\"${B}\",\"profile\":\"${P}\"}"
+                  SEP=","
+                fi
+              done
             done
-          done
+          else
+            for B in $UPDATED; do
+              for P in $(echo "$PROFILES" | tr '|' ' '); do
+                MATRIX="${MATRIX}${SEP}{\"branch\":\"${B}\",\"profile\":\"${P}\"}"
+                SEP=","
+              done
+            done
+          fi
           MATRIX="${MATRIX}]"
 
           if [ "$MATRIX" = "[]" ]; then HAS="false"; else HAS="true"; fi
