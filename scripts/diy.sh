@@ -126,7 +126,7 @@ if [ -f "$tencentddns_ctrl" ]; then
     echo "  ✅ tencentddns 菜单归位到服务"
 fi
 # NPC 内网穿透客户端 (luci-app-npc + npc)
-git_clone https://github.com/goodmen001/nps-openwrt
+git_clone https://github.com/djylb/nps-openwrt
 # EasyTier 去中心化组网 (luci-app-easytier)
 git_clone https://github.com/EasyTier/luci-app-easytier
 # rtp2httpd IPTV 组播转单播 (luci-app-rtp2httpd + rtp2httpd)
