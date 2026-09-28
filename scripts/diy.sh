@@ -114,15 +114,6 @@ fi
 git_clone https://github.com/whzhni1/luci-app-vnt2
 
 # ============ 用户追加功能源 ============
-# 腾讯云 DDNS (luci-app-tencentddns)
-git_clone https://github.com/Tencent-Cloud-Plugins/tencentcloud-openwrt-plugin-ddns
-# 将 tencentddns 菜单从 admin/tencentcloud 归位到 admin/services
-tencentddns_ctrl="package/tencentcloud-openwrt-plugin-ddns/tencentcloud_ddns/files/luci/controller/tencentddns.lua"
-if [ -f "$tencentddns_ctrl" ]; then
-    sed -i 's/{"admin", "tencentcloud"}/{"admin", "services", "tencentcloud"}/g' "$tencentddns_ctrl"
-    sed -i 's/"腾讯云设置", 30/"腾讯云设置", 90/g' "$tencentddns_ctrl"
-    echo "  ✅ tencentddns 菜单归位到服务"
-fi
 # NPC 内网穿透客户端 (luci-app-npc + npc)
 git_clone https://github.com/djylb/nps-openwrt
 # EasyTier 去中心化组网 (luci-app-easytier)
