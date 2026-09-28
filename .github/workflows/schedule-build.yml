@@ -35,10 +35,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: schedule-build
-  cancel-in-progress: false
-
 jobs:
   # ============================================================
   # Step 1: 检测源码是否有更新 + 生成动态 matrix

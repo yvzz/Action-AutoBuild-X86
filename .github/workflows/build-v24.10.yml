@@ -19,10 +19,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: build-v24.10
-  cancel-in-progress: true
-
 jobs:
   build:
     uses: ./.github/workflows/build-openwrt.yml
