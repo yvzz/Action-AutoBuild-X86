@@ -19,10 +19,6 @@ uci set luci.main.lang='zh_cn'
 # Set default theme to Aurora
 uci set luci.main.mediaurlbase='/luci-static/aurora'
 
-# 移除 softethervpn 默认创建的 vpn0 接口
-# （SoftEther 默认在 /etc/config/network 写入 vpn0，但设备未运行会报“网络设备不存在”）
-uci -q delete network.vpn0 2>/dev/null || true
-
 # Commit changes
 uci commit network
 uci commit system
