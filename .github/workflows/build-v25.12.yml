@@ -35,7 +35,7 @@ jobs:
     uses: ./.github/workflows/build-openwrt.yml
     with:
       branch: v25.12
-      profile: ${{ inputs.profile }}
+      profile: ${{ inputs.profile || 'Plus' }}
       lan_ip: ${{ inputs.lan_ip }}
       lan_gateway: ${{ inputs.lan_gateway || '10.0.0.253' }}
       lan_netmask: ${{ inputs.lan_netmask || '255.255.255.0' }}
