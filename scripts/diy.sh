@@ -115,6 +115,12 @@ git_clone https://github.com/whzhni1/luci-app-vnt2
 # ============ 用户追加功能源 ============
 # NPC 内网穿透客户端 (luci-app-npc + npc)
 git_clone https://github.com/djylb/nps-openwrt
+# 让 luci-app-npc 显式依赖 npc（djylb 0.34.7），确保 npc 二进制随 LuCI 一起编入；
+# 若 npc 下载失败则整个包构建失败，避免静默退回 feeds 旧版 nps (0.26.24)
+if [ -f package/nps-openwrt/luci-app-npc/Makefile ]; then
+  sed -i 's/^#LUCI_DEPENDS:=+npc/LUCI_DEPENDS:=+npc/' package/nps-openwrt/luci-app-npc/Makefile
+  echo "  ✅ luci-app-npc 已显式依赖 npc"
+fi
 # EasyTier 去中心化组网 (luci-app-easytier)
 git_clone https://github.com/EasyTier/luci-app-easytier
 # rtp2httpd IPTV 组播转单播 (luci-app-rtp2httpd + rtp2httpd)

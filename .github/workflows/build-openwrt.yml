@@ -283,14 +283,21 @@ jobs:
             fi
           done
           # 检查不应存在的旧包（feeds 自带旧版 nps、系统 ddns、已存档 alist）
+          # 这些旧包会与 djylb 的 npc(0.34.7) 抢 /usr/bin/npc，导致固件里仍是旧版 0.26.24，必须硬失败
           FORBIDDEN="nps luci-app-nps luci-app-ddns luci-app-alist"
+          FORBIDDEN_FOUND=""
           for pkg in $FORBIDDEN; do
             if grep -qw "$pkg" "$MANIFEST"; then
-              echo "  ⚠️ 意外包含旧包: $pkg"
+              echo "  ❌ 意外包含旧包: $pkg"
+              FORBIDDEN_FOUND="$FORBIDDEN_FOUND $pkg"
             else
               echo "  ✅ 已排除: $pkg"
             fi
           done
+          if [ -n "$FORBIDDEN_FOUND" ]; then
+            echo "::error::固件混入了应排除的旧包:$FORBIDDEN_FOUND"
+            exit 1
+          fi
           if [ -n "$MISSING" ]; then
             echo "::error::关键包缺失:$MISSING"
             exit 1
