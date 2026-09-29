@@ -88,7 +88,6 @@ echo "📦 添加第三方插件..."
 # 基础插件
 git_clone https://github.com/kongfl888/luci-app-adguardhome
 git_clone https://github.com/sirpdboy/luci-app-ddns-go
-git_clone_all https://github.com/sbwml/luci-app-alist
 git_clone_all https://github.com/sbwml/luci-app-mosdns
 git_clone https://github.com/sbwml/packages_lang_golang golang
 git_clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
