@@ -263,6 +263,40 @@ jobs:
           echo "整理完成的文件列表:"
           ls -lh
 
+      - name: Verify Critical Packages
+        run: |
+          cd $GITHUB_WORKSPACE/openwrt/bin/targets/*/*
+          MANIFEST=$(ls *.manifest 2>/dev/null | head -1)
+          if [ -z "$MANIFEST" ]; then
+            echo "::warning::未找到 manifest 文件，跳过关键包检查"
+            exit 0
+          fi
+          echo "检查关键包是否在固件中..."
+          CRITICAL="luci-app-mwan3 mwan3 luci-app-npc npc ddns-go luci-app-ddns-go"
+          MISSING=""
+          for pkg in $CRITICAL; do
+            if grep -qw "$pkg" "$MANIFEST"; then
+              echo "  ✅ $pkg"
+            else
+              echo "  ❌ 缺失: $pkg"
+              MISSING="$MISSING $pkg"
+            fi
+          done
+          # 检查不应存在的旧包（feeds 自带旧版 nps、系统 ddns、已存档 alist）
+          FORBIDDEN="nps luci-app-nps luci-app-ddns luci-app-alist"
+          for pkg in $FORBIDDEN; do
+            if grep -qw "$pkg" "$MANIFEST"; then
+              echo "  ⚠️ 意外包含旧包: $pkg"
+            else
+              echo "  ✅ 已排除: $pkg"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::关键包缺失:$MISSING"
+            exit 1
+          fi
+          echo "所有关键包均已包含在固件中"
+
       - name: Upload To Release
         uses: ncipollo/release-action@v1
         with:
