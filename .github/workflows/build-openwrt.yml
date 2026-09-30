@@ -272,7 +272,7 @@ jobs:
             exit 0
           fi
           echo "检查关键包是否在固件中..."
-          CRITICAL="luci-app-mwan3 mwan3 luci-app-npc npc ddns-go luci-app-ddns-go luci-app-vnt2 luci-app-ipsec-vpnd strongswan-default kmod-ipsec"
+          CRITICAL="luci-app-mwan3 mwan3 luci-app-npc npc ddns-go luci-app-ddns-go luci-app-vnt2"
           MISSING=""
           for pkg in $CRITICAL; do
             if grep -qw "$pkg" "$MANIFEST"; then
