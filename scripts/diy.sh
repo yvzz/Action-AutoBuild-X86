@@ -194,6 +194,15 @@ echo "    option mediaurlbase '/luci-static/aurora'" >> package/base-files/files
 sed -i 's/CONFIG_PACKAGE_kmod-oaf=y/# CONFIG_PACKAGE_kmod-oaf is not set/g' .config 2>/dev/null || true
 sed -i 's/CONFIG_PACKAGE_luci-app-oaf=y/# CONFIG_PACKAGE_luci-app-oaf is not set/g' .config 2>/dev/null || true
 
+# 移除 ImmortalWrt feeds 自带的 nps 包（v0.26.24）
+#   feeds/packages/net/nps 的 Makefile 在同一文件内同时 define Package/nps 与 Package/npc，
+#   与 djylb/nps-openwrt 的 npc(PKG_VERSION 0.34.7) 同名冲突；feeds 版本会盖掉 djylb 版本，
+#   致使最终固件里 /usr/bin/npc 一直是 0.26.24。
+#   必须在 ./scripts/feeds install -a 之后执行，物理删除 feeds 源目录与 package/feeds 软链，
+#   让 djylb 的 npc/nps/luci-app-npc 独占该包名。
+rm -rf feeds/packages/net/nps package/feeds/packages/nps
+echo "  ✅ 移除 feeds nps (0.26.24)，djylb npc (0.34.7) 独占"
+
 echo ""
 echo "========================================"
 echo "✅ DIY 脚本执行完成"
@@ -224,4 +233,21 @@ fi
 if [ -f "feeds/luci/applications/luci-app-openvpn-server/root/etc/config/openvpn" ]; then
     rm -f "feeds/luci/applications/luci-app-openvpn-server/root/etc/config/openvpn"
     echo "  ✅ 移除 luci-app-openvpn-server 的重复 etc/config/openvpn"
+fi
+
+# 清理 luci-app-openvpn-server 默认创建的 network.vpn0@ifname='tun0' 接口
+#   OpenVPN 默认 enabled=0，tun0 设备只有 OpenVPN 启动后才存在；该静态接口在
+#   OpenVPN 未启用时让 LuCI 接口页一直提示"设备 tun0 不存在"。
+#   注：init-settings.sh 的 uci delete 跑在 uci-defaults/openvpn 之前（文件名
+#   '99-init-settings' 字典序早于 'openvpn'），删了又被设回，所以这里直接 patch
+#   源脚本：移除 set/delete network.vpn0 + commit network 那几行。
+#   保留 firewall zone + 端口放行 + renewcert.sh；OpenVPN 启用时由该 UI 重建接口。
+OVPN_UCID="feeds/luci/applications/luci-app-openvpn-server/root/etc/uci-defaults/openvpn"
+if [ -f "$OVPN_UCID" ]; then
+    sed -i \
+        -e "/^[[:space:]]*delete network\.vpn0/d" \
+        -e "/^[[:space:]]*set network\.vpn0/d" \
+        -e "/^[[:space:]]*commit network/d" \
+        "$OVPN_UCID"
+    echo "  ✅ 移除 luci-app-openvpn-server 默认 network.vpn0 (tun0) 静态接口"
 fi
