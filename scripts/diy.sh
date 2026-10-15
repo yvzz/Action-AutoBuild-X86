@@ -88,6 +88,9 @@ echo "📦 添加第三方插件..."
 # 基础插件
 git_clone https://github.com/kongfl888/luci-app-adguardhome
 git_clone https://github.com/coffeelb/luci-app-cddns
+# 全能推送 PushBot（替代原微信推送 luci-app-serverchan）：
+# 支持钉钉/企业微信/飞书/Telegram/Bark/PushPlus 等多渠道，本身即 tty228/luci-app-wechatpush 的演进分支
+git_clone https://github.com/zzsj0928/luci-app-pushbot
 git_clone_all https://github.com/sbwml/luci-app-mosdns
 git_clone https://github.com/sbwml/packages_lang_golang golang
 git_clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
@@ -98,7 +101,6 @@ git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclas
 
 # VPN相关
 git_clone https://github.com/esirplayground/luci-app-poweroff
-git_clone -b openwrt-18.06 https://github.com/tty228/luci-app-wechatpush luci-app-serverchan
 
 # Tailscale VPN（图形界面 + 后端）
 git_clone https://github.com/asvow/luci-app-tailscale
